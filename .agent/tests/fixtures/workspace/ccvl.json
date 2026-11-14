@@ -21,7 +21,9 @@
       "web": "outputs/web",
       "videos": "outputs/videos",
       "presentations": "outputs/presentations",
-      "portfolios": "outputs/portfolios"
+      "portfolios": "outputs/portfolios",
+      "chatbot": "outputs/chatbot",
+      "audio": "outputs/audio"
     },
     "opportunities": {
       "root": "opportunities",
