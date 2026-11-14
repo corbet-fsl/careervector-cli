@@ -27,7 +27,7 @@ The product has four domains:
 .agent/                                  implementation and agent workflows
 inputs/                                  profile, interviews, assets and library
 outputs/cvl/                             approved general CV and cover letter
-outputs/<document>/                      flyers, web, videos, presentations, portfolios
+outputs/<document>/                      flyers, web, videos, presentations, portfolios, chatbot, audio
 opportunities/<organisation>/<position>/ one concrete job and its documents
 ```
 

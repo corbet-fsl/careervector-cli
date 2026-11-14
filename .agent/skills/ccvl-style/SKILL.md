@@ -43,7 +43,7 @@ A style owns the visual system: page geometry, fonts, composition and content
 fields. A substyle is a variation within that style. Create
 `<document root>/<style>/<substyle>/<language>/<country>/`, where the root is
 `outputs/cvl/<cv|cl>` or `outputs/<document>` for flyers, web, videos,
-presentations and portfolios (see `ccvl.json` `documents`); never put a substyle
+presentations, portfolios, chatbot and audio (see `ccvl.json` `documents`); never put a substyle
 beside its parent style. Independent styles need not import Harvard or use
 `src/`. Share code only where it actually belongs to the same design.
 

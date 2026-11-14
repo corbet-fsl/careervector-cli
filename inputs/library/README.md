@@ -5,7 +5,8 @@ Material that is consulted while writing and designing, but never rendered:
 ```text
 library/
 ├── inspiration/   external designs to borrow form from, by output type:
-│                  cvl/, flyers/, web/, videos/, presentations/, portfolios/
+│                  cvl/, flyers/, web/, videos/, presentations/, portfolios/,
+│                  chatbot/, audio/
 ├── studies/       own studies of what works and why
 ├── research/      market and role research; events/ holds event material
 └── norms/         official, non-negotiable rules (formats, regulations)

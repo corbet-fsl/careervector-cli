@@ -3,7 +3,7 @@
 Each style directory below a document root declares its own `style.toml`:
 `outputs/cvl/cv/<style>/`, `outputs/cvl/cl/<style>/`, or
 `outputs/<document>/<style>/` for the other output documents (flyers, web,
-videos, presentations and portfolios). Style names and substyle names are lowercase letters, digits,
+videos, presentations, portfolios, chatbot and audio). Style names and substyle names are lowercase letters, digits,
 hyphens or underscores. A substyle name is scoped to its parent style.
 
 ```toml
@@ -364,9 +364,9 @@ grouped first page followed by the unchanged Harvard D+ pages 2–4. Harvard and
 a scaffold with `standard` and `timeline` substyles, and Onepager a one-page
 scaffold with `standard`; neither design is defined yet. The remaining style
 positions are empty slots: `outputs/cvl/cl/slot-2` to `slot-4`.
-Flyers, web, videos, presentations and portfolios each ship a `scaffold`
+Flyers, web, videos, presentations, portfolios, chatbot and audio each ship a `scaffold`
 style with a `standard` substyle that prints only the approved profile name
-and contact line, on portrait A4 for flyers and portfolios and on a 16:9
+and contact line, on portrait A4 for flyers, portfolios and audio and on a 16:9
 landscape page for the others; their style slots 2 to 4 are empty and no
 design is defined for them yet.
 All designed styles support German and English Swiss locales; the CV and letter styles use portrait A4. See [the gallery](../../outputs/cvl/README.md) for PDFs,

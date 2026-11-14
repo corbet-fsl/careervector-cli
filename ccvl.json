@@ -21,7 +21,9 @@
       "web": "outputs/web",
       "videos": "outputs/videos",
       "presentations": "outputs/presentations",
-      "portfolios": "outputs/portfolios"
+      "portfolios": "outputs/portfolios",
+      "chatbot": "outputs/chatbot",
+      "audio": "outputs/audio"
     },
     "opportunities": {
       "root": "opportunities",
@@ -94,6 +96,22 @@
     },
     "portfolios": {
       "root": "outputs/portfolios",
+      "default_style": "scaffold",
+      "slots": {
+        "styles": 4,
+        "substyles": 5
+      }
+    },
+    "chatbot": {
+      "root": "outputs/chatbot",
+      "default_style": "scaffold",
+      "slots": {
+        "styles": 4,
+        "substyles": 5
+      }
+    },
+    "audio": {
+      "root": "outputs/audio",
       "default_style": "scaffold",
       "slots": {
         "styles": 4,

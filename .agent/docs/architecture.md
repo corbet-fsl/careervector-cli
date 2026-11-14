@@ -68,7 +68,7 @@ for the shipped tree.
 
 ## `outputs/<document>/`: other output documents
 
-Flyers, web pages, videos, presentations and portfolios each own a folder
+Flyers, web pages, videos, presentations, portfolios, chatbot and audio each own a folder
 with the same document → style → substyle → language → country hierarchy and
 slot grid. `ccvl.json` declares every document in its `documents` table; the
 key is the document name and names its folder in `workspace_groups.outputs`.
