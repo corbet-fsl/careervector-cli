@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Julian Y. Richard Corbet
 # SPDX-License-Identifier: FSL-1.1-ALv2
 schema = 1
-project = "ccvl"
+project = "careervector-cli"
 
 # Reuse suitable provisioned Rust and locked published dependencies.
 # Native publication requires every platform receipt, including unavailable executors.
