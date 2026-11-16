@@ -170,7 +170,7 @@ impl Compiler {
             "Typst did not create a PDF for {}",
             spec.name
         );
-        crate::pdf::lowercase_locales(&bytes).map_err(anyhow::Error::from)
+        crate::pdf::lowercase_locales(&bytes)
     }
 }
 
