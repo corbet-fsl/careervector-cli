@@ -1,5 +1,9 @@
 # ccvl
 
+<!-- ccid:security:begin (rendered by ccid render; do not edit by hand) -->
+**Security and dependencies:** watched by Renovate (with OSV vulnerability alerts); an update is merged only when its tests pass. See the [security policy](.github/SECURITY.md).
+<!-- ccid:security:end -->
+
 [Verification and release checks](.agent/docs/ci.md)
 
 ccvl is a local-first, forkable CV and application system built as a native
