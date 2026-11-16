@@ -2,12 +2,12 @@
 set -euo pipefail
 
 repo_root="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-cache_root="${CCVL_BOOTSTRAP_CACHE_ROOT:-$repo_root/.agent/cache/ccvl}"
+cache_root="${CCVL_BOOTSTRAP_CACHE_ROOT:-$repo_root/.agent/cache/cv}"
 local_bin="$cache_root/bin"
 cargo_home="$cache_root/cargo"
 rustup_home="$cache_root/rustup"
 target_dir="$cache_root/target"
-binary="$local_bin/ccvl"
+binary="$local_bin/cv"
 rust_channel="$(sed -n 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/rust-toolchain.toml")"
 
 # shellcheck source=.agent/scripts/tool-versions.sh
@@ -67,10 +67,10 @@ fi
 
 release_asset=""
 case "$platform" in
-  Linux-x86_64) release_asset=ccvl-linux-x86_64 ;;
-  Linux-aarch64) release_asset=ccvl-linux-aarch64 ;;
-  Darwin-aarch64) release_asset=ccvl-macos-arm64 ;;
-  Darwin-x86_64) release_asset=ccvl-macos-x86_64 ;;
+  Linux-x86_64) release_asset=cv-linux-x86_64 ;;
+  Linux-aarch64) release_asset=cv-linux-aarch64 ;;
+  Darwin-aarch64) release_asset=cv-macos-arm64 ;;
+  Darwin-x86_64) release_asset=cv-macos-x86_64 ;;
 esac
 
 version_matches() {
@@ -202,7 +202,7 @@ if [[ -x "$binary" && -n "$fingerprint" ]] \
 fi
 release_base="$(release_base_for)"
 if [[ "$binary_state" != ready && "$from_source" != 1 ]] \
-  && ! grep -Fxq -- "${release_asset#ccvl-}" "$repo_root/.agent/release-platforms.txt"; then
+  && ! grep -Fxq -- "${release_asset#cv-}" "$repo_root/.agent/release-platforms.txt"; then
   printf 'No prebuilt runtime is released for %s in this workspace. See .agent/docs/tooling.md for developer source builds.\n' "$platform" >&2
   exit 2
 fi
@@ -302,7 +302,7 @@ host_packages_display=none
 if ((${#missing_bootstrap[@]} > 0)); then missing_display="${missing_bootstrap[*]}"; fi
 if ((${#host_packages[@]} > 0)); then host_packages_display="${host_packages[*]}"; fi
 
-printf 'ccvl bootstrap plan\n'
+printf 'cv bootstrap plan\n'
 printf '  platform: %s\n' "$platform"
 if [[ "$from_source" != 1 ]]; then
   printf '  Rust toolchain: not required (precompiled runtime)\n'
@@ -320,7 +320,7 @@ case "$toolchain_state" in
     ;;
 esac
 fi
-printf '  ccvl binary: %s\n' "$binary_state"
+printf '  cv binary: %s\n' "$binary_state"
 if [[ "$binary_state" == install && "$fetch_enabled" == 1 ]]; then
   printf '  prebuilt binary: %s (matching runtime required)\n' "$release_asset"
 fi
@@ -341,10 +341,10 @@ if [[ "$toolchain_state" == install && "$platform" == Darwin-* && "$from_source"
 fi
 
 if [[ "$binary_state" == ready ]]; then
-  printf 'No ccvl build changes required.\n'
+  printf 'No cv build changes required.\n'
 fi
 if [[ "$mode" == plan ]]; then
-  printf 'No changes made. Run bash ./ccvl setup to execute this plan.\n'
+  printf 'No changes made. Run bash ./cv setup to execute this plan.\n'
   exit 0
 fi
 

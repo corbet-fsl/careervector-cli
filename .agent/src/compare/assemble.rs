@@ -179,7 +179,7 @@ pub(crate) fn interleave(columns: &[Column], rows: &[u32], title: &str) -> Resul
     let catalog_id = output.add_object(catalog);
     let info_id = output.add_object(dictionary! {
         "Title" => text(title),
-        "Producer" => text("ccvl compare"),
+        "Producer" => text("cv compare"),
     });
     let identifier = identifier(columns, rows, title);
     output.trailer.set("Root", catalog_id);

@@ -4,7 +4,7 @@ set -euo pipefail
 export LC_ALL=C
 
 repo_root="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-binary="$repo_root/.agent/cache/ccvl/bin/ccvl"
+binary="$repo_root/.agent/cache/cv/bin/cv"
 if (($# > 1)); then
   printf 'Usage: %s [existing-ccvl-binary]\n' "$0" >&2
   exit 2
@@ -17,7 +17,7 @@ trap 'rm -rf -- "$validation_dir"' EXIT
 
 cd "$repo_root"
 [[ -x "$binary" ]] || {
-  printf 'The ccvl binary is missing: %s\n' "$binary" >&2
+  printf 'The cv binary is missing: %s\n' "$binary" >&2
   exit 2
 }
 
@@ -29,7 +29,7 @@ first_build="$validation_dir/first"
 "$binary" public-check --artifacts "$first_build"
 bash .agent/tests/test_bootstrap.sh
 bash .agent/tests/test_previews.sh
-for shell_script in .agent/scripts/*.sh .agent/tests/*.sh ccvl; do
+for shell_script in .agent/scripts/*.sh .agent/tests/*.sh cv; do
   bash -n "$shell_script"
 done
 

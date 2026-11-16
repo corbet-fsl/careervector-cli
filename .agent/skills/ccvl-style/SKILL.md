@@ -43,12 +43,12 @@ A style owns the visual system: page geometry, fonts, composition and content
 fields. A substyle is a variation within that style. Create
 `<document root>/<style>/<substyle>/<language>/<country>/`, where the root is
 `outputs/cvl/<cv|cl>` or `outputs/<document>` for flyers, web, videos,
-presentations, portfolios, chatbot and audio (see `ccvl.json` `documents`); never put a substyle
+presentations, portfolios, chatbot and audio (see `cv.json` `documents`); never put a substyle
 beside its parent style. Independent styles need not import Harvard or use
 `src/`. Share code only where it actually belongs to the same design.
 
 Each document has a fixed grid of style and substyle positions, declared as
-`slots` in `ccvl.json`. A new design fills an empty slot instead of adding a
+`slots` in `cv.json`. A new design fills an empty slot instead of adding a
 position. For a substyle, rename its `slot-N` entry in `substyles` to the real
 name, remove it from `empty_substyles` and add its directory and leaves. For a
 style, replace the lowest-numbered `<document root>/slot-N/` directory with the

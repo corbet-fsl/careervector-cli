@@ -5,7 +5,7 @@ updated = "2026-11-01"
 # (outputs/cvl/cv/harvard/src/entries-en.typ): one fact per role line and bullet.
 
 # Claims that are not true of the author. Every occurrence in application
-# wording or outputs/cvl/ sources is printed as a hint by ccvl check.
+# wording or outputs/cvl/ sources is printed as a hint by cv check.
 [[not_true]]
 term = "SAP"
 note = "No professional SAP or ERP experience; the own mini ERP of the hardware business is the only ERP work"

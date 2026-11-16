@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-binary="$repo_root/.agent/cache/ccvl/bin/ccvl"
+binary="$repo_root/.agent/cache/cv/bin/cv"
 
 command_name="${1:-help}"
 shift || true
@@ -16,7 +16,7 @@ case "$command_name" in
     ;;
   *)
     if [[ ! -x "$binary" ]]; then
-      printf 'ccvl is not set up. Run bash ./ccvl bootstrap, then bash ./ccvl setup.\n' >&2
+      printf 'cv is not set up. Run bash ./cv bootstrap, then bash ./cv setup.\n' >&2
       exit 2
     fi
     probe() { command -v "$1" 2>/dev/null; }
@@ -24,7 +24,7 @@ case "$command_name" in
     source "$repo_root/.agent/scripts/runtime-id.sh"
     expected="$(source_fingerprint)"
     if [[ -z "$expected" || "$("$binary" runtime-id 2>/dev/null)" != "$expected" ]]; then
-      printf 'The installed ccvl runtime is stale. Run bash ./ccvl setup to install the matching binary.\n' >&2
+      printf 'The installed cv runtime is stale. Run bash ./cv setup to install the matching binary.\n' >&2
       exit 2
     fi
     cd "$repo_root"

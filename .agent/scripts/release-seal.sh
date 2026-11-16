@@ -13,14 +13,14 @@ dir="${CCID_RELEASE_DIR:?Missing the release directory}"
 [[ -z ${GH_TOKEN:-} ]] || { echo 'Publication credentials must not reach the seal.' >&2; exit 2; }
 # The evidence command is the tested native Linux executable of this very release: it must run here
 # and carry the identity of this source (the same rule the Windows attestation applies).
-runtime_id="$(jq -er '.runtime_id' "$dir/ccvl-linux-x86_64.receipt.json")"
+runtime_id="$(jq -er '.runtime_id' "$dir/cv-linux-x86_64.receipt.json")"
 [[ "$runtime_id" =~ ^[0-9a-f]{64}$ ]] || { echo 'The receipt carries no runtime identity.' >&2; exit 2; }
-(cd "$dir" && sha256sum --check --strict ccvl-linux-x86_64.sha256 >/dev/null)
-chmod 0755 "$dir/ccvl-linux-x86_64"
-[[ $("$dir/ccvl-linux-x86_64" runtime-id) == "$runtime_id" ]] || {
+(cd "$dir" && sha256sum --check --strict cv-linux-x86_64.sha256 >/dev/null)
+chmod 0755 "$dir/cv-linux-x86_64"
+[[ $("$dir/cv-linux-x86_64" runtime-id) == "$runtime_id" ]] || {
   echo 'The native Linux executable of the release does not carry the runtime identity of this source.' >&2; exit 2
 }
-export CCVL_RELEASE_EVIDENCE_BIN="$dir/ccvl-linux-x86_64"
+export CCVL_RELEASE_EVIDENCE_BIN="$dir/cv-linux-x86_64"
 # shellcheck source=.agent/scripts/release-evidence.sh
 source .agent/scripts/release-evidence.sh
 ccvl_prepare_release_evidence

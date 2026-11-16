@@ -153,7 +153,7 @@ fn independent_renderer_owns_custom_paper_geometry_and_settings() {
     let root = temporary.path();
     write(
         root,
-        "ccvl.json",
+        "cv.json",
         r#"{"format":"ccvl-workspace","schema_version":9,"documents":{"cv":{"root":"outputs/cvl/cv","default_style":"orbit"}}}"#,
     );
     for source in [".agent/typst/document-settings.json", "inputs/profile.toml"] {

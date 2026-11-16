@@ -52,11 +52,11 @@ limits and cancellation while a call is running; the CLI validates recorded
 usage and current run state when a result arrives. Unavailable usage telemetry
 is recorded explicitly as null, not invented; known budget overruns fail.
 
-From the workspace root, using `ccvl` or its platform launcher:
+From the workspace root, using `cv` or its platform launcher:
 
 ```sh
-ccvl review prepare <spec.json> <run-dir>
-ccvl review status <run-dir>
+cv review prepare <spec.json> <run-dir>
+cv review status <run-dir>
 ```
 
 The run directory must be a new `.agent/cache/review/<id>` or
@@ -191,8 +191,8 @@ extra caveats when the reader's factual understanding is already defensible.
 No finding quota is required.
 
 ```sh
-ccvl review submit <run-dir> <result.json>
-ccvl review status <run-dir>
+cv review submit <run-dir> <result.json>
+cv review status <run-dir>
 ```
 
 Protocol command success is not readiness: `submit` and `status` can exit zero
@@ -218,12 +218,12 @@ The initial candidate has **two corrections**. Before editing an allowed
 canonical content path, consume the next allowance:
 
 ```sh
-ccvl review begin-revision <run-dir>
+cv review begin-revision <run-dir>
 # The actor makes this correction in canonical content.
-ccvl review prepare-revision <run-dir>
+cv review prepare-revision <run-dir>
 # A fresh critic reviews the current artifacts and writes the next result.
-ccvl review submit <run-dir> <result.json>
-ccvl review status <run-dir>
+cv review submit <run-dir> <result.json>
+cv review status <run-dir>
 ```
 
 A revised candidate consumes its allowance even if it fails mechanically.
@@ -250,7 +250,7 @@ Preparation and correction can also report an intermediate state. Use the
 returned status and reasons, not a favourable interpretation of the filename.
 Continue independent work while obtaining needed evidence or decisions; qualify
 or remove unsupported wording only when it preserves the requested meaning.
-Cancellation uses `ccvl review cancel <run-dir>`; the external coordinator must
+Cancellation uses `cv review cancel <run-dir>`; the external coordinator must
 also stop any in-flight provider call. No review outcome authorises submission,
 messaging, signing or accepting declarations.
 

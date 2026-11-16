@@ -41,7 +41,7 @@ struct State {
 impl State {
     fn new(workspace: &Workspace) -> Self {
         Self {
-            inputs: BTreeSet::from([workspace.path("ccvl.json")]),
+            inputs: BTreeSet::from([workspace.path("cv.json")]),
             previous: None,
         }
     }
@@ -56,7 +56,7 @@ impl State {
             return None;
         }
         let observed = workspace.tracked();
-        observed.observe_input("ccvl.json");
+        observed.observe_input("cv.json");
         let result = build(&observed);
         let mut inputs = observed.observed_inputs();
         if let Ok(outputs) = &result {

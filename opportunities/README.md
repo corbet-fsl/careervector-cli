@@ -64,8 +64,8 @@ Create the record deterministically, then ask the `ccvl-apply` skill to
 research, draft, review, measure, and render it:
 
 ```sh
-bash ./ccvl new-opportunity <organisation-key> <position-key>
-bash ./ccvl build-opportunity <organisation-key> <position-key>
+bash ./cv new-opportunity <organisation-key> <position-key>
+bash ./cv build-opportunity <organisation-key> <position-key>
 ```
 
 The public ccvl repository intentionally contains only this scaffold. Real

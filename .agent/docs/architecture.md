@@ -70,7 +70,7 @@ for the shipped tree.
 
 Flyers, web pages, videos, presentations, portfolios, chatbot and audio each own a folder
 with the same document → style → substyle → language → country hierarchy and
-slot grid. `ccvl.json` declares every document in its `documents` table; the
+slot grid. `cv.json` declares every document in its `documents` table; the
 key is the document name and names its folder in `workspace_groups.outputs`.
 The CV and the cover letter keep their opportunity records, page presets and
 measured contracts. Other documents take the generic path: a small record per

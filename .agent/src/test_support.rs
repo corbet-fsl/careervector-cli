@@ -2,7 +2,7 @@
 //! `outputs/cvl/`: they copy `.agent/tests/fixtures/workspace` (see its README) or
 //! generate a probe workspace, plus the engine-owned inputs every workspace
 //! needs (`.agent/typst`, scaffolds and schemas). Real-data invariants of the
-//! showcase are enforced by `ccvl check`; see `.agent/docs/ci.md`.
+//! showcase are enforced by `cv check`; see `.agent/docs/ci.md`.
 
 use std::{
     fs,
@@ -101,10 +101,10 @@ pub(crate) fn fixture_workspace() -> (tempfile::TempDir, Workspace) {
 pub(crate) fn checkable_fixture_workspace() -> (tempfile::TempDir, Workspace) {
     let (directory, workspace) = fixture_workspace();
     let root = directory.path();
-    let mut manifest = workspace.read_json("ccvl.json").unwrap();
+    let mut manifest = workspace.read_json("cv.json").unwrap();
     manifest["skills"] =
-        crate::workspace::read_json(&repository().join("ccvl.json")).unwrap()["skills"].clone();
-    fs::write(root.join("ccvl.json"), format!("{manifest:#}\n")).unwrap();
+        crate::workspace::read_json(&repository().join("cv.json")).unwrap()["skills"].clone();
+    fs::write(root.join("cv.json"), format!("{manifest:#}\n")).unwrap();
     for relative in [
         ".agent/skills",
         ".agent/typst/fonts",
@@ -142,7 +142,7 @@ pub(crate) fn paper_workspace() -> (tempfile::TempDir, Workspace) {
         fs::write(path, text).unwrap();
     };
     write(
-        "ccvl.json",
+        "cv.json",
         &json!({
             "format": "ccvl-workspace", "schema_version": 9,
             "documents": {

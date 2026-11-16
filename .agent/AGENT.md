@@ -116,7 +116,7 @@ a copy on another forge runs no CI. A minor release is promoted only when its
 platform legs have passed; a patch release holds Linux x86_64 alone.
 
 For a new or uncertain environment, route to `ccvl-install`. Use
-`bash ./ccvl bootstrap` on Linux/macOS or `.\ccvl.cmd bootstrap` on Windows;
+`bash ./cv bootstrap` on Linux/macOS or `.\cv.cmd bootstrap` on Windows;
 do not ask a novice to choose a package manager or learn Git first. For an
 already managed environment, accept a no-change plan and verify it. Presence
 of a command is not completion: the harness must pass.

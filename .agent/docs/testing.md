@@ -9,10 +9,10 @@ agent will behave correctly.
 Run the complete local suite with:
 
 ```sh
-bash ./ccvl check
+bash ./cv check
 ```
 
-On Windows, run `.\ccvl.cmd check` instead.
+On Windows, run `.\cv.cmd check` instead.
 
 It verifies the workspace manifest, schemas, application/profile data, declared
 skills and evaluation cases, local Markdown links and the workspace paths that
@@ -102,8 +102,8 @@ await a platform leg as pending, a promotion does not) and all four shared gates
 and missing artifacts never silently reduce the released platform set. Validation also runs ShellCheck
 and REUSE. See [Releases](releases.md) for cache and identity details.
 
-The same line contract is available directly with `bash ./ccvl measure` or
-`.\ccvl.cmd measure`. It reports all violations in one pass so underfill or
+The same line contract is available directly with `bash ./cv measure` or
+`.\cv.cmd measure`. It reports all violations in one pass so underfill or
 overflow causes an editorial iteration instead of a one-error-at-a-time loop.
 
 ### Rust test fixtures

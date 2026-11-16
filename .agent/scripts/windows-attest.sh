@@ -7,13 +7,13 @@
 #
 # The release job left ONE draft for this commit, build-<sha>, holding every asset
 # (executables, bundles, receipts, gates, manifests). This stage reads it (`ccid release fetch`), lets
-# `ccvl release-evidence attest` re-issue the receipt (it checks the report against the
+# `cv release-evidence attest` re-issue the receipt (it checks the report against the
 # receipt: the very same executable, the same source, every check and the whole suite
 # passed), lets `release-evidence check` write the manifests exactly as the promote stage
 # will write them again, and replaces the changed files in the draft (`ccid release put`):
-#   ccvl-windows-x86_64.receipt.json      the native receipt
-#   ccvl-windows-x86_64.native-result.json the clone's report, as recorded by the receipt
-#   ccvl-windows-x86_64.cross-receipt.json the receipt it replaces (its checksum is in the new one)
+#   cv-windows-x86_64.receipt.json      the native receipt
+#   cv-windows-x86_64.native-result.json the clone's report, as recorded by the receipt
+#   cv-windows-x86_64.cross-receipt.json the receipt it replaces (its checksum is in the new one)
 #   manifest.json, runtime-manifest.json
 # Nothing else is touched and nothing is published: a published release is final, so this
 # refuses it (promotion renames the draft to v<version>, and states the platforms again). Run twice, it changes nothing the second time.
@@ -39,8 +39,8 @@ dist="$scratch/dist"
 mkdir -p "$dist"
 # Every asset of the draft (the runner's read credential reads a draft; the job token cannot).
 "$CCID_BIN" release fetch --into "$dist"
-receipt_name="ccvl-$platform.receipt.json"
-cross_name="ccvl-$platform.cross-receipt.json"
+receipt_name="cv-$platform.receipt.json"
+cross_name="cv-$platform.cross-receipt.json"
 # A run that died between removing the old receipt and uploading the new one: the copy
 # of the old one is on the release.
 if [[ ! -e $dist/$receipt_name && -e $dist/$cross_name ]]; then
@@ -54,8 +54,8 @@ runtime_id="$(jq -er '.runtime_id' "$dist/$receipt_name")"
 # stage uses it: it must run here and carry the identity of this source. (An evidence
 # binary named in the environment is used as it is: release-evidence.sh documents that.)
 if [[ -z ${CCVL_RELEASE_EVIDENCE_BIN:-} ]]; then
-  linux_exe="$dist/ccvl-linux-x86_64"
-  (cd "$dist" && sha256sum --check --strict ccvl-linux-x86_64.sha256 >/dev/null)
+  linux_exe="$dist/cv-linux-x86_64"
+  (cd "$dist" && sha256sum --check --strict cv-linux-x86_64.sha256 >/dev/null)
   chmod 0755 "$linux_exe"
   [[ $(cd "$repo_root" && "$linux_exe" runtime-id) == "$runtime_id" ]] || {
     echo 'The native Linux executable of the release does not carry the runtime identity of this source.' >&2; exit 2
@@ -88,7 +88,7 @@ echo "Draft of $sha:"
 # First the new names, then the receipt (the old one is kept as $cross_name), then the
 # manifests that describe them.
 [[ ! -e $dist/$cross_name ]] || put "$cross_name"
-put "ccvl-$platform.native-result.json"
+put "cv-$platform.native-result.json"
 put "$receipt_name"
 put manifest.json
 put runtime-manifest.json

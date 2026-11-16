@@ -6,14 +6,14 @@ Every concrete opportunity has one canonical tailored-data file:
 opportunities/<organisation-key>/<position-key>/application.toml
 ```
 
-For Harvard, the general CV foundation must first pass `ccvl profile-status
+For Harvard, the general CV foundation must first pass `cv profile-status
 --verify-sources`. Tailoring cannot repair a core page that lacks enough
 verified stations.
 
 Create it without choosing or copying paths manually:
 
 ```sh
-bash ./ccvl new-opportunity <organisation-key> <position-key>
+bash ./cv new-opportunity <organisation-key> <position-key>
 ```
 
 The command validates both keys, copies
@@ -73,7 +73,7 @@ drafts discussed with an assistant, may be kept for reference under
 `variants/<style>/<substyle>/<label>/`, sorted by their CV style and substyle,
 as a copy of their record and documents. Labels are free; Git keeps their
 history. Variants are never built or checked. To review the application
-against its variants, `bash ./ccvl compare opportunities/<organisation-key>/<position-key>
+against its variants, `bash ./cv compare opportunities/<organisation-key>/<position-key>
 opportunities/<organisation-key>/<position-key>/variants/<style>/<substyle>/<label>`
 renders each record into `.agent/cache/` and shows them side by side; see
 [comparisons](compare.md).
@@ -81,15 +81,15 @@ renders each record into `.agent/cache/` and shows them side by side; see
 Measure and render one opportunity from the repository root:
 
 ```sh
-bash ./ccvl measure-opportunity <organisation-key> <position-key>
-bash ./ccvl build-opportunity <organisation-key> <position-key>
+bash ./cv measure-opportunity <organisation-key> <position-key>
+bash ./cv build-opportunity <organisation-key> <position-key>
 ```
 
 On Windows:
 
 ```powershell
-.\ccvl.cmd measure-opportunity <organisation-key> <position-key>
-.\ccvl.cmd build-opportunity <organisation-key> <position-key>
+.\cv.cmd measure-opportunity <organisation-key> <position-key>
+.\cv.cmd build-opportunity <organisation-key> <position-key>
 ```
 
 No locale or page argument is needed: the record owns both. The build writes
@@ -125,7 +125,7 @@ be symbolic links, so they cannot redirect output or cleanup into another packag
 Keep a live package fresh while tailoring:
 
 ```sh
-bash ./ccvl watch-opportunity <organisation-key> <position-key>
+bash ./cv watch-opportunity <organisation-key> <position-key>
 # or:
 just watch <organisation-key> <position-key>
 ```

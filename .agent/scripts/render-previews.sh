@@ -4,7 +4,7 @@ set -euo pipefail
 export LC_ALL=C
 repo_root="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
-binary="$repo_root/.agent/cache/ccvl/bin/ccvl"
+binary="$repo_root/.agent/cache/cv/bin/cv"
 cache="$repo_root/.agent/cache/previews"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/ccvl-previews.XXXXXXXX")"
 trap 'rm -rf -- "$scratch"' EXIT

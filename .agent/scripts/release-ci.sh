@@ -49,7 +49,7 @@ case "$action" in
     # Built here for the platforms nothing here can run: ARM64 (never run anywhere
     # yet), and x86_64 Windows until its test executor exists. macOS waits for
     # the macOS build clone and stays pending. Which of them this release holds
-    # follows from its version (`ccvl release-evidence platforms`): a patch release
+    # follows from its version (`cv release-evidence platforms`): a patch release
     # holds Linux x86_64 alone and builds nothing here.
     mapfile -t wanted < <(release_evidence platforms)
     built=0
@@ -64,10 +64,10 @@ case "$action" in
   linux-deep)
     [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'Linux x86_64 verification worker required.' >&2; exit 2; }
     release_evidence source >/dev/null
-    (cd "$CCVL_RELEASE_DIR" && sha256sum --check --strict ccvl-linux-x86_64.sha256)
-    mkdir -p .agent/cache/ccvl/bin
-    cp "$CCVL_RELEASE_DIR/ccvl-linux-x86_64" .agent/cache/ccvl/bin/ccvl
-    chmod 0755 .agent/cache/ccvl/bin/ccvl
+    (cd "$CCVL_RELEASE_DIR" && sha256sum --check --strict cv-linux-x86_64.sha256)
+    mkdir -p .agent/cache/cv/bin
+    cp "$CCVL_RELEASE_DIR/cv-linux-x86_64" .agent/cache/cv/bin/cv
+    chmod 0755 .agent/cache/cv/bin/cv
     bash .agent/scripts/check-linux-deep.sh
     release_evidence gate linux-deep --output "$CCVL_RELEASE_DIR"
     ;;

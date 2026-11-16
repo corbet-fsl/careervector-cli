@@ -1,5 +1,5 @@
 //! Offline private-route guards with real Git repositories and fixture runtimes.
-//! They drive the real `ccvl private-check` command inside a shallow checkout,
+//! They drive the real `cv private-check` command inside a shallow checkout,
 //! the way a Forgejo job leaves it.
 #![cfg(all(unix, target_os = "linux", target_arch = "x86_64"))]
 
@@ -9,11 +9,11 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use ccvl::archive::sha256_hex;
+use careervector_cli::archive::sha256_hex;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
-const BIN: &str = env!("CARGO_BIN_EXE_ccvl");
+const BIN: &str = env!("CARGO_BIN_EXE_cv");
 const UPSTREAM_URL: &str = "https://forge.example.invalid/corbet-fsl/careervector-cli.git";
 const TOKEN: &str = "fixture-job-token";
 /// Publication credentials: each one alone must stop the stage.
@@ -176,7 +176,7 @@ impl Downstream {
             "Cargo.lock",
             "rust-toolchain.toml",
             ".agent/build.rs",
-            "ccvl.json",
+            "cv.json",
             ".agent/src/main.rs",
             ".agent/typst/lib.typ",
         ] {
@@ -257,7 +257,7 @@ impl Downstream {
         fs::create_dir_all(&bin).unwrap();
         fs::create_dir_all(&downstream.assets).unwrap();
         fs::write(&downstream.trace, "").unwrap();
-        let binary = downstream.assets.join("ccvl-linux-x86_64");
+        let binary = downstream.assets.join("cv-linux-x86_64");
         executable(&binary, FAKE_RUNTIME);
         executable(&bin.join("curl"), FAKE_CURL);
         let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap());
@@ -297,7 +297,7 @@ impl Downstream {
                 "CCVL_CHECK_RUNTIME",
                 downstream
                     .assets
-                    .join("ccvl-linux-x86_64")
+                    .join("cv-linux-x86_64")
                     .display()
                     .to_string(),
             ),

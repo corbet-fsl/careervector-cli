@@ -12,10 +12,10 @@ No other language runtime is part of ccvl: release evidence and the private
 downstream route are hidden maintainer commands of the same binary, scripts are
 Bash and PowerShell, and `public-check` rejects any Python source or metadata.
 
-Run `bash ./ccvl bootstrap` on Linux x86_64 for a read-only setup plan. The
+Run `bash ./cv bootstrap` on Linux x86_64 for a read-only setup plan. The
 matching `setup` command installs only the precompiled runtime whose embedded
 source identity matches the workspace, then runs the complete check. The Linux
-x86_64 bundle includes this executable below `.agent/cache/ccvl/`; its ordinary
+x86_64 bundle includes this executable below `.agent/cache/cv/`; its ordinary
 Linux runtime is verified on Ubuntu 24.04 with glibc 2.39. Linux ARM64, macOS and
 Windows have no verified prebuilt release.
 
@@ -28,22 +28,22 @@ repository-local cache; it does not replace the global toolchain. Normal users
 continue to use the matching precompiled runtime without Rust. Native source
 build paths remain available for Linux x86_64/ARM64, macOS Intel/Apple Silicon
 and Windows x86_64/ARM64; their presence is not native release evidence. Use
-`bash ./ccvl setup --from-source` on Linux/macOS or
-`.\ccvl.cmd setup --from-source` on Windows only for an explicitly requested
+`bash ./cv setup --from-source` on Linux/macOS or
+`.\cv.cmd setup --from-source` on Windows only for an explicitly requested
 developer build.
 
 For cloud sessions, `.agent/scripts/web-session-setup.sh` prepares a container:
 it installs missing CI packages (`file`, Poppler, QPDF, `jq`, ShellCheck), CI's
 pinned actionlint, and the precompiled runtime matching the checkout through
-`bash ./ccvl setup`. When the engine source has no matching release yet, it
-says so and leaves the explicit developer build, `bash ./ccvl setup
+`bash ./cv setup`. When the engine source has no matching release yet, it
+says so and leaves the explicit developer build, `bash ./cv setup
 --from-source`, to the session. In a cloud session, call it from the
 environment's setup script, e.g. `bash <repository>/.agent/scripts/web-session-setup.sh`.
 Agent configuration stays in `.agent/`.
 
 ## Line measurement
 
-Run `bash ./ccvl measure` or `.\ccvl.cmd measure` after changing CV or
+Run `bash ./cv measure` or `.\cv.cmd measure` after changing CV or
 cover-letter text. Add `--all` to print every actual, target, and allowed fill
 percentage. The command measures the selected font’s real glyph width inside each
 Typst container. Underfill and overflow return a non-zero exit status and an
@@ -51,8 +51,8 @@ instruction to rewrite and repeat the measurement.
 
 ## Watch mode
 
-`bash ./ccvl watch-cv <locale> [pages]`, `bash ./ccvl watch-cl <locale>`,
-and `bash ./ccvl watch-opportunity <organisation-key> <position-key>`
+`bash ./cv watch-cv <locale> [pages]`, `bash ./cv watch-cl <locale>`,
+and `bash ./cv watch-opportunity <organisation-key> <position-key>`
 rebuild when an input changes and stay running after compile errors. CV and cover-letter watchers accept
 `--style <name>` and `--substyle <name>`; omissions use the record or configured
 defaults. Letters also accept `--pages <count>`.
@@ -81,7 +81,7 @@ shortcuts.
 
 Archivo is included directly in the repository and embedded in the native
 binary together with the Typst 0.15.1 compiler and Typstyle 0.15.1 formatter.
-Use `bash ./ccvl build` or `.\ccvl.cmd build`; no external document runtime or
+Use `bash ./cv build` or `.\cv.cmd build`; no external document runtime or
 system font is used. The platform `check` command treats any Typst diagnostic or
 non-Archivo PDF font as a failure.
 

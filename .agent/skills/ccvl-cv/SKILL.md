@@ -74,7 +74,7 @@ These counts are the Harvard family's contract — shared by the `standard`
 and `compact` CV substyles, which differ only in whitespace — not engine law:
 other styles bring their own contracts. Before polishing or
 tailoring, load `inputs/interviews/stations.toml` and run
-`ccvl profile-status --verify-sources`. Page 1 must contain 6–8 full experience
+`cv profile-status --verify-sources`. Page 1 must contain 6–8 full experience
 stations. Page 2 contains exactly 10 supporting stations with two bullets each.
 Page 3 contains exactly 10 projects or initiatives with two bullets each. Page
 4 contains three competency groups, each with three blocks of three keyword
@@ -101,7 +101,7 @@ An exhausted allowance leaves the draft incomplete, never accepted.
 Every controlled CV line is measured against a minimum, target, and maximum
 fill percentage from `outputs/cvl/cv/harvard/contract.toml` for its actual Typst container. A sparse or
 overflowing line is a failed draft. Add relevant, verified signal or tighten
-the wording, then run `ccvl measure` again. Never use filler merely to make a
+the wording, then run `cv measure` again. Never use filler merely to make a
 draft pass.
 
 ## Verification
@@ -128,8 +128,8 @@ an unsupported reader inference. Check distinct arguments and material coverage
 as well as source support.
 
 An actor–critic run allows two corrections after the initial candidate. Call
-`ccvl review begin-revision <run-dir>` before editing and
-`ccvl review prepare-revision <run-dir>` afterwards. Check every allowed
+`cv review begin-revision <run-dir>` before editing and
+`cv review prepare-revision <run-dir>` afterwards. Check every allowed
 candidate, including a mechanically failed one, before considering another.
 Re-review current artifacts for both fixes and new errors. Stale hashes,
 unavailable tools or unread pages cannot become a pass; exhausted corrections

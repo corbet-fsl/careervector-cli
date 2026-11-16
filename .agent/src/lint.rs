@@ -1171,7 +1171,7 @@ fn string_contents<'a>(lines: &[(usize, &'a str)]) -> Vec<(usize, &'a str)> {
 static STRING_LITERAL: OnceLock<Regex> = OnceLock::new();
 
 /// Quantified claims in application wording that occur in no interview fact.
-/// Opt-in (`ccvl check --figures`): rephrased or converted figures can differ
+/// Opt-in (`cv check --figures`): rephrased or converted figures can differ
 /// from their source, so this is a reading aid rather than a default hint.
 pub fn figure_hints(workspace: &Workspace) -> Result<Vec<String>> {
     let path = workspace.path(PLAN);
@@ -1215,7 +1215,7 @@ pub fn figure_hints(workspace: &Workspace) -> Result<Vec<String>> {
 // Workspace entry points
 // ---------------------------------------------------------------------------
 
-/// Hints printed by `ccvl check`: interview–CV drift and `not_true` terms.
+/// Hints printed by `cv check`: interview–CV drift and `not_true` terms.
 pub fn check_hints(workspace: &Workspace) -> Result<Vec<String>> {
     let path = workspace.path(PLAN);
     if !path.is_file() {

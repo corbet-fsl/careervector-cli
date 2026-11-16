@@ -57,22 +57,22 @@ pub fn run_selected(
 }
 
 fn validate_manifest(workspace: &Workspace) -> Result<()> {
-    let manifest = workspace.read_json("ccvl.json")?;
+    let manifest = workspace.read_json("cv.json")?;
     ensure!(
         manifest.get("format") == Some(&Value::String("ccvl-workspace".to_owned()))
             && manifest.get("schema_version") == Some(&Value::from(9)),
-        "ccvl.json: unsupported workspace format or schema version"
+        "cv.json: unsupported workspace format or schema version"
     );
     let expected_groups: Value = serde_json::from_str(crate::layout::GROUPS_JSON)?;
     ensure!(
         manifest.get("workspace_groups") == Some(&expected_groups),
-        "ccvl.json: workspace groups differ from the paths this runtime was built with"
+        "cv.json: workspace groups differ from the paths this runtime was built with"
     );
     let documents = styles::documents(workspace)?;
     for required in styles::APPLICATION_DOCUMENTS {
         ensure!(
             documents.contains(&required),
-            "ccvl.json must declare the {required} document"
+            "cv.json must declare the {required} document"
         );
     }
     for document in &documents {
@@ -80,7 +80,7 @@ fn validate_manifest(workspace: &Workspace) -> Result<()> {
         ensure!(
             manifest.pointer(&format!("/documents/{document}/root"))
                 == Some(&Value::String(root.to_owned())),
-            "ccvl.json: documents.{document}.root must be its workspace_groups.outputs.{document} folder {root}"
+            "cv.json: documents.{document}.root must be its workspace_groups.outputs.{document} folder {root}"
         );
         styles::default_style(workspace, document)?;
     }
@@ -101,7 +101,7 @@ fn validate_manifest(workspace: &Workspace) -> Result<()> {
     for relative in required {
         ensure!(
             workspace.path(&relative).is_file(),
-            "ccvl.json: missing referenced file {relative}"
+            "cv.json: missing referenced file {relative}"
         );
     }
     for legacy in [

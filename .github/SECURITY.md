@@ -5,8 +5,8 @@ publication of credentials, private source documents, real handwritten
 signatures, recipient data, or application records privately through GitHub's
 security advisory interface.
 
-Before publishing a change, run `bash ./ccvl public-check` (or
-`.\ccvl.cmd public-check` on Windows). The check is a guardrail, not proof that
+Before publishing a change, run `bash ./cv public-check` (or
+`.\cv.cmd public-check` on Windows). The check is a guardrail, not proof that
 content is safe: review the complete staged file list and every intentional
 public identifier in `.agent/docs/public-identifiers.md` as well.
 

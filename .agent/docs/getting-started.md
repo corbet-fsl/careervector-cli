@@ -20,7 +20,7 @@ use this prompt:
 > Ask me about facts, not tooling, unless the
 > harness reaches an unavoidable system-permission decision.
 
-The agent should first run `bash ./ccvl bootstrap` on Linux x86_64.
+The agent should first run `bash ./cv bootstrap` on Linux x86_64.
 That command is read-only and shows the exact plan. Because the prompt
 explicitly requests setup, it may then run the matching
 `setup` command. Setup:
@@ -30,7 +30,7 @@ explicitly requests setup, it may then run the matching
   checksum-verified runtime matching an existing source checkout;
 - checks the binary's embedded runtime identity before installation and refuses
   stale or unavailable binaries; it never silently installs a compiler;
-- keeps the binary below `.agent/cache/ccvl/`; the document compiler,
+- keeps the binary below `.agent/cache/cv/`; the document compiler,
   formatter, and font pack are embedded;
 - runs the full deterministic suite before declaring success.
 
@@ -42,8 +42,8 @@ it makes no changes and performs the same verification.
 No Git is required. In the extracted folder on Linux x86_64:
 
 ```sh
-bash ./ccvl bootstrap
-bash ./ccvl setup
+bash ./cv bootstrap
+bash ./cv setup
 ```
 
 `bootstrap` only reports. `setup` is the explicit instruction to install what
@@ -51,18 +51,18 @@ the report identifies. For an already managed environment, install the listed
 dependencies however you prefer and run:
 
 ```sh
-bash ./ccvl doctor
-bash ./ccvl check
+bash ./cv doctor
+bash ./cv check
 ```
 
 Developers who intentionally build from source can use
-`bash ./ccvl setup --from-source` on Linux/macOS or
-`.\ccvl.cmd setup --from-source` on native Windows, with stable Rust meeting
+`bash ./cv setup --from-source` on Linux/macOS or
+`.\cv.cmd setup --from-source` on native Windows, with stable Rust meeting
 the `Cargo.toml` minimum. These retained source paths are not a verified binary
 release claim for other platforms. Normal users run the Linux x86_64 bundle.
 
-All product commands are available through `bash ./ccvl help` or
-`.\ccvl.cmd help`.
+All product commands are available through `bash ./cv help` or
+`.\cv.cmd help`.
 
 ## What happens next
 

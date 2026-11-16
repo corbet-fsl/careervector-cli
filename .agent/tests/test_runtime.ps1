@@ -30,16 +30,16 @@ try {
         param([switch]$UseBasicParsing, [string]$Uri, [string]$OutFile)
         if ($Uri.EndsWith(".sha256")) {
             $Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $TestBinary).Hash.ToLowerInvariant()
-            [IO.File]::WriteAllText($OutFile, "$Hash  ccvl.exe`n")
+            [IO.File]::WriteAllText($OutFile, "$Hash  cv.exe`n")
         }
         else { Copy-Item -LiteralPath $TestBinary -Destination $OutFile }
     }
-    & (Join-Path $Scratch "ccvl.ps1") setup
-    & (Join-Path $Scratch "ccvl.ps1") doctor
+    & (Join-Path $Scratch "cv.ps1") setup
+    & (Join-Path $Scratch "cv.ps1") doctor
     if ($LASTEXITCODE -ne 0) { throw "Matching Windows runtime failed" }
     [IO.File]::AppendAllText((Join-Path $Scratch ".agent\src\main.rs"), "`n// edited runtime`n")
     $Rejected = $false
-    try { & (Join-Path $Scratch "ccvl.ps1") doctor }
+    try { & (Join-Path $Scratch "cv.ps1") doctor }
     catch { $Rejected = $_.Exception.Message.Contains("runtime is stale") }
     if (-not $Rejected) { throw "Windows launcher accepted a stale runtime" }
     $Rejected = $false

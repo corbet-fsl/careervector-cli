@@ -76,7 +76,7 @@
       "options": [
         {
           "id": "accept-idempotent-noop",
-          "text": "Accept the no-change plan and run the deterministic ccvl check to prove the workspace is ready."
+          "text": "Accept the no-change plan and run the deterministic cv check to prove the workspace is ready."
         },
         {
           "id": "reinstall-pinned-tools",
@@ -107,7 +107,7 @@
       "options": [
         {
           "id": "use-windows-dispatcher",
-          "text": "Use .\\ccvl.cmd bootstrap, then .\\ccvl.cmd setup; let the checked-in PowerShell harness install the native prebuilt binary after verifying its checksum and exact workspace runtime identity."
+          "text": "Use .\\cv.cmd bootstrap, then .\\cv.cmd setup; let the checked-in PowerShell harness install the native prebuilt binary after verifying its checksum and exact workspace runtime identity."
         },
         {
           "id": "verify-windows-output",
@@ -138,7 +138,7 @@
       "options": [
         {
           "id": "use-macos-dispatcher",
-          "text": "Use bash ./ccvl bootstrap, then setup; install the arm64 prebuilt binary inside the repository cache after verifying its checksum and exact workspace runtime identity, without requiring Rust."
+          "text": "Use bash ./cv bootstrap, then setup; install the arm64 prebuilt binary inside the repository cache after verifying its checksum and exact workspace runtime identity, without requiring Rust."
         },
         {
           "id": "verify-macos-output",

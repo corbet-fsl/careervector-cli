@@ -296,10 +296,10 @@ application process needs, and delete entries that are no longer needed.
 
 ## Planned commands
 
-- `ccvl contacts` prints an overview: open next steps from touchpoints (with
+- `cv contacts` prints an overview: open next steps from touchpoints (with
   `due` and without `done`) and positions whose `follow_up_at` is due, sorted
   by date, overdue first.
-- `ccvl contacts export --format vcard|ics|csv` writes the mapping above:
+- `cv contacts export --format vcard|ics|csv` writes the mapping above:
   vCard 4.0 cards for organisations and people, an iCalendar file with
   journals, meetings and follow-ups, or a CSV table of contacts.
 

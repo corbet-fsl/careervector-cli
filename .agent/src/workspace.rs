@@ -28,14 +28,14 @@ impl Workspace {
         {
             return Self::at(&root);
         }
-        bail!("no ccvl.json found in the current directory or its parents")
+        bail!("no cv.json found in the current directory or its parents")
     }
 
     pub fn at(root: &Path) -> Result<Self> {
         let root = root
             .canonicalize()
             .with_context(|| format!("cannot resolve workspace {}", root.display()))?;
-        if !root.join("ccvl.json").is_file() {
+        if !root.join("cv.json").is_file() {
             bail!("{} is not a ccvl workspace", root.display());
         }
         Ok(Self {
@@ -185,7 +185,7 @@ pub fn read_toml_value(path: &Path) -> Result<Value> {
 fn find_root(start: &Path) -> Option<PathBuf> {
     start
         .ancestors()
-        .find(|candidate| candidate.join("ccvl.json").is_file())
+        .find(|candidate| candidate.join("cv.json").is_file())
         .map(Path::to_path_buf)
 }
 
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn repository_root_is_discoverable() {
         let workspace = Workspace::discover(None).unwrap();
-        assert!(workspace.root().join("ccvl.json").is_file());
+        assert!(workspace.root().join("cv.json").is_file());
     }
 
     #[test]
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn manifest_names_the_interview_cvl_and_keyed_opportunity_contracts() {
         let repository = repository();
-        let manifest_text = fs::read_to_string(repository.path("ccvl.json")).unwrap();
+        let manifest_text = fs::read_to_string(repository.path("cv.json")).unwrap();
         let workspace_groups = manifest_text.split_once("\"workspace_groups\"").unwrap().1;
         let inputs = workspace_groups.find("\"inputs\"").unwrap();
         let outputs = workspace_groups.find("\"outputs\"").unwrap();

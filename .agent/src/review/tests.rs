@@ -24,7 +24,7 @@ impl Fixture {
         fs::create_dir_all(root.join(".agent/src")).unwrap();
         fs::create_dir_all(root.join(".agent/typst")).unwrap();
         for path in [
-            "ccvl.json",
+            "cv.json",
             "Cargo.toml",
             "Cargo.lock",
             "rust-toolchain.toml",

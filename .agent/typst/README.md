@@ -101,7 +101,7 @@ cnice, cdate and cink as ranges, and `cletter::typst::packages()` pins its
 Typst imports to whichever compatible releases Cargo resolved. To move to the
 latest compatible releases, run `cargo update` (or
 `cargo update -p cletter -p cnice -p cdate -p cink -p ctypst`), rebuild with
-`bash ./ccvl setup --from-source`, run `bash ./ccvl check`, and commit
+`bash ./cv setup --from-source`, run `bash ./cv check`, and commit
 `Cargo.lock`. No Typst source changes. A new incompatible release line, such
 as cletter 0.5, needs a deliberate requirement change.
 

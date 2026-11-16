@@ -236,11 +236,11 @@ fn validate_markdown_links(workspace: &Workspace) -> Result<()> {
         let text = fs::read_to_string(&path)?;
         // Workspace paths named in inline code must exist, read in the same
         // pass as the links. They resolve against the nearest enclosing
-        // workspace (a fixture has its own ccvl.json) or the repository.
+        // workspace (a fixture has its own cv.json) or the repository.
         let base = path
             .ancestors()
             .skip(1)
-            .find(|directory| directory.join("ccvl.json").is_file())
+            .find(|directory| directory.join("cv.json").is_file())
             .unwrap_or(workspace.root());
         // Library material is consulted, never rendered, and may quote paths of
         // other times or repositories, so it is not judged.
@@ -332,7 +332,7 @@ fn validate_text_files(workspace: &Workspace) -> Result<()> {
     let suffixes = [
         "cmd", "csv", "json", "lock", "md", "ps1", "rs", "sh", "toml", "typ", "yaml", "yml",
     ];
-    let names = [".gitattributes", ".gitignore", "ccvl"];
+    let names = [".gitattributes", ".gitignore", "cv"];
     let trailing = Regex::new(r"(?m)[ \t]+$")?;
     let merge = Regex::new(r"(?m)^(<{7}|={7}|>{7})(?: |$)")?;
     let mut errors = Vec::new();
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn review_json_newline_policy_keeps_other_hygiene_checks() {
         let directory = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}\n").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}\n").unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         let relative = "opportunities/example/role/review/run/revision-0/manifest.json";
         let path = workspace.path(relative);
@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn review_json_still_cannot_be_published() {
         let directory = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}\n").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}\n").unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         let path = workspace.path("opportunities/example/role/review/result.json");
         fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -470,7 +470,7 @@ mod tests {
         // ccid writes its receipts and metrics into the checkout (gitignored `.ccid/`), after
         // the first check and before the next one; they are tool output, not reviewed source.
         let directory = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}\n").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}\n").unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         for relative in [".ccid/cache-metrics.json", ".moon/cache/runReport.json"] {
             let path = workspace.path(relative);
@@ -486,7 +486,7 @@ mod tests {
         use std::os::unix::fs::symlink;
         let directory = tempdir().unwrap();
         let store = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}\n").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}\n").unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         // The roots the boundary scan reads at its end must exist.
         for root in [
@@ -548,7 +548,7 @@ mod tests {
     #[test]
     fn no_python_source_is_allowed_anywhere() {
         let directory = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}\n").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}\n").unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         validate_no_python_artifacts(&workspace).unwrap();
         for relative in [
@@ -574,7 +574,7 @@ mod tests {
     #[test]
     fn empty_python_cache_directory_is_rejected_on_the_public_surface() {
         let directory = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}\n").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}\n").unwrap();
         fs::create_dir_all(directory.path().join(".agent/scripts/__pycache__")).unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         let error = validate_no_python_artifacts(&workspace)

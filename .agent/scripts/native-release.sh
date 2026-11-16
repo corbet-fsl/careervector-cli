@@ -40,8 +40,8 @@ fi
     "$platform" "$actual_os" "$actual_arch" "$host" >&2
   exit 2
 }
-exe=ccvl
-[[ "$native_os" != Windows ]] || exe=ccvl.exe
+exe=cv
+[[ "$native_os" != Windows ]] || exe=cv.exe
 # Explicitly build for the verified compiler's native host, ignoring configured cross targets.
 # Thin LTO and one codegen unit are release flags in a cargo config file, not a
 # manifest [profile] table (build-efficiency rule 2).

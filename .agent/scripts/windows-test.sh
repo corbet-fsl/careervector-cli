@@ -2,7 +2,7 @@
 # Test the Windows x86_64 platform of ccvl in the offline Windows clone: the executable
 # that ships, and the test suite, both for the one Windows ABI (gnullvm, llvm-mingw).
 #
-# 1. The release job cross-builds ccvl-windows-x86_64.exe and leaves it in the draft
+# 1. The release job cross-builds cv-windows-x86_64.exe and leaves it in the draft
 #    release of its commit. This stage fetches THAT file (it does not build it), proves it
 #    is the file the receipt names, hands it to the clone with `vm-win` and runs it there:
 #    the identity compiled into it, then `public-check` on the source of the same commit.
@@ -25,7 +25,7 @@ repo_root="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 report="${1:-}"
 platform=windows-x86_64
-exe_name="ccvl-$platform.exe"
+exe_name="cv-$platform.exe"
 sha="${CI_COMMIT_SHA:-}"
 # Must equal the Rust target of this platform in release_evidence.rs (PLATFORMS).
 expected_host=x86_64-pc-windows-gnullvm
@@ -39,7 +39,7 @@ assets="$scratch/assets"
 mkdir -p "$assets"
 
 if [[ -n ${CCVL_WINDOWS_ASSET_DIR:-} ]]; then
-  for name in "$exe_name" "$exe_name.sha256" "$exe_name.runtime-id" "ccvl-$platform.receipt.json"; do
+  for name in "$exe_name" "$exe_name.sha256" "$exe_name.runtime-id" "cv-$platform.receipt.json"; do
     cp -- "$CCVL_WINDOWS_ASSET_DIR/$name" "$assets/$name"
   done
   printf 'Assets from %s (rehearsal).\n' "$CCVL_WINDOWS_ASSET_DIR"
@@ -47,7 +47,7 @@ else
   : "${CCID_BIN:?Missing the ccid that runs this leg}" "${CI_COMMIT_SHA:?Missing the source commit}"
   # The one draft of this commit (`build-<commit>`) holds the receipt and the executable alike.
   # `ccid release leg windows` runs this only when the version holds the platform; the receipt says it again.
-  if ! "$CCID_BIN" release fetch "ccvl-$platform.receipt.json" --into "$assets" 2>/dev/null; then
+  if ! "$CCID_BIN" release fetch "cv-$platform.receipt.json" --into "$assets" 2>/dev/null; then
     # The platform set follows the version: a patch release holds Linux x86_64 alone.
     printf 'The release build-%s does not hold %s; there is nothing to test.\n' "${sha:0:12}" "$platform"
     exit 0
@@ -58,7 +58,7 @@ fi
 
 # The file that runs must be the file the receipt names: receipt, checksum file and bytes agree.
 # A receipt that is already native names the same file; only the identity of the bytes matters.
-receipt="$assets/ccvl-$platform.receipt.json"
+receipt="$assets/cv-$platform.receipt.json"
 [[ $(jq -r '.platform' "$receipt") == "$platform" && $(jq -r '.rust_host' "$receipt") == "$expected_host" ]] || {
   echo "The receipt is not that of $platform built for $expected_host." >&2; exit 2
 }

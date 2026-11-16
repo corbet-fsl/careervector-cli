@@ -159,7 +159,7 @@ fn invalid_overridden_input_still_names_its_source_file() {
     let (_fixture, original) = repository();
     let temporary = tempfile::tempdir().unwrap();
     let root = temporary.path();
-    fs::write(root.join("ccvl.json"), "{}").unwrap();
+    fs::write(root.join("cv.json"), "{}").unwrap();
     let mut leaf = selected(&original, "ledger", "primary", "en-ch");
     let relative = original.relative(&leaf.dir).unwrap();
     leaf.dir = root.join(relative);

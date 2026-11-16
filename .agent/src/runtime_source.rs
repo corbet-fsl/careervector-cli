@@ -17,7 +17,7 @@ pub fn inputs(root: &Path) -> io::Result<Vec<String>> {
         "Cargo.lock",
         "rust-toolchain.toml",
         ".agent/build.rs",
-        "ccvl.json",
+        "cv.json",
     ]
     .map(str::to_owned)
     .to_vec();

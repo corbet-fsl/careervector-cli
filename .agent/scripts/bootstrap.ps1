@@ -16,13 +16,13 @@ $CacheRoot = if (Test-Path Env:CCVL_BOOTSTRAP_CACHE_ROOT) {
     $env:CCVL_BOOTSTRAP_CACHE_ROOT
 }
 else {
-    Join-Path $RepoRoot ".agent\cache\ccvl"
+    Join-Path $RepoRoot ".agent\cache\cv"
 }
 $LocalBin = Join-Path $CacheRoot "bin"
 $CargoHome = Join-Path $CacheRoot "cargo"
 $RustupHome = Join-Path $CacheRoot "rustup"
 $TargetDir = Join-Path $CacheRoot "target"
-$Binary = Join-Path $LocalBin "ccvl.exe"
+$Binary = Join-Path $LocalBin "cv.exe"
 $FromSource = $BuildOption -eq "--from-source" -or $env:CCVL_BOOTSTRAP_FORCE_LOCAL -eq "1"
 $ToolchainFile = Get-Content -Raw (Join-Path $RepoRoot "rust-toolchain.toml")
 if ($ToolchainFile -notmatch '(?m)^\s*channel\s*=\s*"([^"]+)"') {
@@ -137,8 +137,8 @@ function Test-ManagedRust {
 
 $Platform = Get-PlatformKey
 $ReleaseAsset = switch ($Platform) {
-    "Windows-x86_64" { "ccvl-windows-x86_64.exe" }
-    "Windows-aarch64" { "ccvl-windows-arm64.exe" }
+    "Windows-x86_64" { "cv-windows-x86_64.exe" }
+    "Windows-aarch64" { "cv-windows-arm64.exe" }
 }
 $FetchEnabled = $null -ne $ReleaseAsset -and -not $FromSource
 $Assets = @(Import-Csv (Join-Path $PSScriptRoot "tool-assets.csv") |
@@ -183,7 +183,7 @@ if (Test-Path -LiteralPath $Binary -PathType Leaf) {
     if ($RuntimeId -eq $Fingerprint) { $BinaryState = "ready" }
 }
 $ReleasedPlatforms = @(Get-Content -LiteralPath (Join-Path $RepoRoot ".agent/release-platforms.txt"))
-$ReleasePlatform = $ReleaseAsset -replace '^ccvl-', '' -replace '\.exe$', ''
+$ReleasePlatform = $ReleaseAsset -replace '^cv-', '' -replace '\.exe$', ''
 if ($BinaryState -ne "ready" -and -not $FromSource -and $ReleasePlatform -cnotin $ReleasedPlatforms) {
     throw "No prebuilt runtime is released for $Platform in this workspace. See .agent/docs/tooling.md for developer source builds."
 }
@@ -224,7 +224,7 @@ elseif ($SystemKind -ne "none") {
     $ToolchainState = "system"
 }
 
-Write-Output "ccvl bootstrap plan"
+Write-Output "cv bootstrap plan"
 Write-Output "  platform: $Platform"
 if (-not $FromSource) {
     Write-Output "  Rust toolchain: not required (precompiled runtime)"
@@ -238,18 +238,18 @@ switch ($ToolchainState) {
     }
 }
 }
-Write-Output "  ccvl binary: $BinaryState"
+Write-Output "  cv binary: $BinaryState"
 if ($BinaryState -eq "install" -and $FetchEnabled) {
     Write-Output "  prebuilt binary: $ReleaseAsset (matching runtime required)"
 }
 Write-Output "  missing bootstrap commands: none"
 Write-Output "  host packages: none"
 if ($BinaryState -eq "ready") {
-    Write-Output "No ccvl build changes required."
+    Write-Output "No cv build changes required."
 }
 
 if ($Mode -eq "plan") {
-    Write-Output "No changes made. Run .\ccvl.cmd setup to execute this plan."
+    Write-Output "No changes made. Run .\cv.cmd setup to execute this plan."
     return
 }
 
@@ -367,7 +367,7 @@ try {
     try {
         & $Binary setup
         if ($LASTEXITCODE -ne 0) {
-            throw "ccvl setup verification failed with exit code $LASTEXITCODE"
+            throw "cv setup verification failed with exit code $LASTEXITCODE"
         }
     }
     finally {

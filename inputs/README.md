@@ -14,4 +14,4 @@ inputs/
 
 In this public repository `library/` holds only the author's own or freely
 licensed material; third-party material stays in a private workspace. The
-paths are declared once in the `workspace_groups` table of `ccvl.json`.
+paths are declared once in the `workspace_groups` table of `cv.json`.

@@ -17,12 +17,12 @@ if [[ ${FORGEJO_ACTIONS:-} == true ]]; then
     echo 'Forgejo cross builds require the verified ccid target lock.' >&2; exit 2;
   }
 fi
-exe=ccvl
+exe=cv
 driver=zigbuild
 case "$platform" in
   linux-aarch64) triple=aarch64-unknown-linux-gnu; zig_target="$triple.2.39" ;;
-  windows-x86_64) triple=x86_64-pc-windows-gnullvm; driver=llvm-mingw; exe=ccvl.exe ;;
-  windows-arm64) triple=aarch64-pc-windows-gnullvm; driver=llvm-mingw; exe=ccvl.exe ;;
+  windows-x86_64) triple=x86_64-pc-windows-gnullvm; driver=llvm-mingw; exe=cv.exe ;;
+  windows-arm64) triple=aarch64-pc-windows-gnullvm; driver=llvm-mingw; exe=cv.exe ;;
   macos-arm64) triple=aarch64-apple-darwin; driver=clt ;;
   macos-x86_64) echo 'macOS x86_64 is built and run natively in the macOS clone: native-release.sh.' >&2; exit 2 ;;
   linux-x86_64) echo 'Linux x86_64 is built and run natively: native-release.sh.' >&2; exit 2 ;;
@@ -87,7 +87,7 @@ if [[ $driver == llvm-mingw ]]; then
 fi
 # The tested native executable of this run serves the evidence command when it
 # exists; otherwise the command runs from the checkout.
-if [[ -x "$output/ccvl-linux-x86_64" ]]; then export CCVL_RELEASE_EVIDENCE_BIN="$output/ccvl-linux-x86_64"; fi
+if [[ -x "$output/cv-linux-x86_64" ]]; then export CCVL_RELEASE_EVIDENCE_BIN="$output/cv-linux-x86_64"; fi
 # shellcheck source=.agent/scripts/release-evidence.sh
 source .agent/scripts/release-evidence.sh
 ccvl_prepare_release_evidence

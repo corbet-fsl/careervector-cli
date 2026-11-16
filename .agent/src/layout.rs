@@ -1,5 +1,5 @@
 //! Workspace paths, generated at build time from the `workspace_groups`
-//! table of `ccvl.json` (see `.agent/build.rs`). Code names a path by its
+//! table of `cv.json` (see `.agent/build.rs`). Code names a path by its
 //! role, never by a literal, so moving a folder is a manifest edit.
 use std::collections::BTreeSet;
 
@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn layout_matches_the_manifest() {
-        let manifest: Value = serde_json::from_str(include_str!("../../ccvl.json")).unwrap();
+        let manifest: Value = serde_json::from_str(include_str!("../../cv.json")).unwrap();
         let built: Value = serde_json::from_str(GROUPS_JSON).unwrap();
         assert_eq!(manifest["workspace_groups"], built);
     }

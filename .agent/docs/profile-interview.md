@@ -118,7 +118,7 @@ Duplicate terms and unknown fields are errors.
    stations and atomic facts without prematurely choosing sections.
 4. **Deepen:** obtain enough detail for each promising station: period,
    context, responsibility, action, result or scale, tools, and provenance.
-5. **Measure:** run `ccvl profile-status`; select the next question from the
+5. **Measure:** run `cv profile-status`; select the next question from the
    underfilled page and unresolved high-value candidates.
 6. **Revisit:** treat “nothing else” as exhaustion of one prompt, not proof that
    no other experience exists. Change topic, then return once with specific
@@ -167,8 +167,8 @@ placement without changing what happened. Moving is allowed; copying is not.
 Run the gate at any time:
 
 ```sh
-bash ./ccvl profile-status
-bash ./ccvl profile-status --verify-sources
+bash ./cv profile-status
+bash ./cv profile-status --verify-sources
 ```
 
 The first command reports station coverage and targeted next prompts. The
@@ -181,7 +181,7 @@ structure. Entries use `// ccvl-station: <station-id>`, `// ccvl-project:
 To read the whole interview at once, print it as Markdown:
 
 ```sh
-bash ./ccvl profile-status --list
+bash ./cv profile-status --list
 ```
 
 It lists every station with its role line and facts, then the projects, the
@@ -232,7 +232,7 @@ An acknowledged term that no longer occurs in that record is reported as a
 stale acknowledgement, so the list stays short.
 
 Figures are opt-in because rephrased or converted figures can differ from
-their source wording. `ccvl check --figures` reads quantified claims in the
+their source wording. `cv check --figures` reads quantified claims in the
 `[cv]` and `[cl]` wording of application records: numbers with a currency,
 magnitude, `%`, `+`, `×` or `years`, and written magnitudes such as
 `eight-figure` or `achtstellig`. A figure is backed when its number occurs in

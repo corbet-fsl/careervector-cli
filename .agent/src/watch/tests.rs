@@ -5,7 +5,7 @@ use crate::styles::Selection;
 fn fixture() -> (tempfile::TempDir, Workspace, DocumentSpec) {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path();
-    fs::write(root.join("ccvl.json"), "{}\n").unwrap();
+    fs::write(root.join("cv.json"), "{}\n").unwrap();
     fs::write(root.join("style.json"), "{}\n").unwrap();
     fs::write(
         root.join("main.typ"),

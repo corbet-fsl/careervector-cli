@@ -276,12 +276,12 @@ mod tests {
     fn repository_boundary_rejects_an_upstream_owned_change() {
         let directory = tempdir().unwrap();
         let root = directory.path();
-        fs::write(root.join("ccvl.json"), "{}\n").unwrap();
+        fs::write(root.join("cv.json"), "{}\n").unwrap();
         fs::write(root.join("README.md"), "upstream\n").unwrap();
         git_at(root, &["init"]);
         git_at(root, &["config", "user.name", "ccvl test"]);
         git_at(root, &["config", "user.email", "ccvl@example.invalid"]);
-        git_at(root, &["add", "ccvl.json", "README.md"]);
+        git_at(root, &["add", "cv.json", "README.md"]);
         git_at(root, &["commit", "-m", "upstream"]);
         let upstream_commit = git_at(root, &["rev-parse", "HEAD"]);
         git_at(

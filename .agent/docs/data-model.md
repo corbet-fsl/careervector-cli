@@ -13,7 +13,7 @@ working record.
 
 ## Workspace paths
 
-The `workspace_groups` table of `ccvl.json` is the single source of truth for
+The `workspace_groups` table of `cv.json` is the single source of truth for
 where workspace data lives: `inputs` (profile, interviews, station plan,
 assets), `outputs` (the CV and cover-letter documents and one folder per other
 output document) and `opportunities`.
@@ -62,7 +62,7 @@ wording overrides. Different styles keep independent wording. See
 
 ## Output document records
 
-The `documents` table of `ccvl.json` names every document; its key also names
+The `documents` table of `cv.json` names every document; its key also names
 the document's folder in `workspace_groups.outputs`. A leaf of a document
 other than the CV and the cover letter keeps a small record:
 `schema_version`, `revision`, `options.language`, an optional
@@ -93,7 +93,7 @@ or explicit approval; the public showcase is not a source of candidate facts.
 
 Locale and language codes are always lowercase, for example `de-ch`.
 This covers `options.language` in every `application.toml`, the locale keys
-in `ccvl.json` and `inputs/profile.toml`, the `expected-language` assertions in
+in `cv.json` and `inputs/profile.toml`, the `expected-language` assertions in
 the Typst templates, and every locale argument passed to the correspondence
 libraries. The correspondence family (`cgreet`, `cfarewell`, `cink`,
 `cdate`, `cletter`) stores and returns lowercase locale identifiers and accepts

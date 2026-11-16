@@ -427,7 +427,7 @@ fn summary_counsel_notes_allowed_thin_and_tolerated_spill() {
     let workspace = workspace();
     let directory = tempfile::tempdir().unwrap();
     std::fs::write(
-        directory.path().join("ccvl.json"),
+        directory.path().join("cv.json"),
         "{\"documents\":{\"cv\":{\"root\":\"outputs/cvl/cv\"},\"cl\":{\"root\":\"outputs/cvl/cl\"}}}",
     )
     .unwrap();
@@ -478,7 +478,7 @@ fn cover_letter_spec_with_application(application: &str) -> DocumentSpec {
 #[test]
 fn recipient_counsel_uses_correspondence_locale_rules_without_duplicate_warnings() {
     let directory = tempfile::tempdir().unwrap();
-    std::fs::write(directory.path().join("ccvl.json"), "{}").unwrap();
+    std::fs::write(directory.path().join("cv.json"), "{}").unwrap();
     let workspace = Workspace::at(directory.path()).unwrap();
     let spec = cover_letter_spec_with_application("record.toml");
     for (locale, name, expected) in [
@@ -602,7 +602,7 @@ fn summary_counsel_uses_shared_wording_and_leaf_exceptions_like_typst() {
         std::fs::create_dir_all(root.join(relative).parent().unwrap()).unwrap();
     }
     std::fs::write(
-        root.join("ccvl.json"),
+        root.join("cv.json"),
         json!({"documents": {
             "cv": {"root": "outputs/cvl/cv"}, "cl": {"root": "outputs/cvl/cl"}
         }})

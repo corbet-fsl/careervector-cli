@@ -1,6 +1,6 @@
 //! Check one private downstream on a Forgejo runner, anchored on the upstream commit's own successful CI run.
 //!
-//! Maintainer route, hidden from the normal help: `ccvl private-check`. It runs
+//! Maintainer route, hidden from the normal help: `cv private-check`. It runs
 //! in the checkout of the private repository that the Forgejo job staged (the
 //! exact commit), driven by the environment the Forgejo runner provides (see
 //! `.agent/docs/private-downstream.md`). It stages everything it verifies from
@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 use crate::archive::{self, Env, Kind, dumps, lfs_pointer, sha256_hex, unsafe_member_path};
 
 const PUBLIC_REPO: &str = "corbet-fsl/careervector-cli";
-const ASSET: &str = "ccvl-linux-x86_64";
+const ASSET: &str = "cv-linux-x86_64";
 /// The upstream workflow whose successful run anchors the checks.
 const UPSTREAM_CI: &str = "ci.yml";
 /// Publication credentials. None may reach this stage.

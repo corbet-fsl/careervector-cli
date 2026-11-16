@@ -9,7 +9,7 @@ pub fn verify(root: &Path) -> Result<()> {
         .context("cannot identify this workspace's runtime source")?;
     ensure!(
         expected == ID,
-        "this ccvl binary does not match the workspace runtime; run the workspace setup command to install its matching precompiled binary"
+        "this cv binary does not match the workspace runtime; run the workspace setup command to install its matching precompiled binary"
     );
     Ok(())
 }

@@ -15,10 +15,10 @@ export CARGO_PROFILE_TEST_DEBUG="${CARGO_PROFILE_TEST_DEBUG:-0}"
 # once. The release flags are a cargo config file passed with --config; the
 # manifest carries no [profile] table (build-efficiency rule 2).
 ccvl_build_optimized() {
-  "${CCVL_CARGO_COMMAND[@]}" build --locked --bin ccvl --release \
+  "${CCVL_CARGO_COMMAND[@]}" build --locked --bin cv --release \
     --config .cargo/release-profile.toml
 }
-ccvl_optimized_binary="${CARGO_TARGET_DIR:-target}/release/ccvl"
+ccvl_optimized_binary="${CARGO_TARGET_DIR:-target}/release/cv"
 
 if (($# == 0)); then
   set -- rust
@@ -43,7 +43,7 @@ for check in "$@"; do
       # shellcheck source=.agent/scripts/existing-tool-path.sh
       source .agent/scripts/existing-tool-path.sh
       ccvl_use_existing_lint_tools
-      shellcheck .agent/scripts/*.sh .agent/tests/*.sh ccvl
+      shellcheck .agent/scripts/*.sh .agent/tests/*.sh cv
       reuse lint
       bash .agent/tests/test_bootstrap.sh
       bash .agent/tests/test_ci_toolchain.sh
@@ -76,7 +76,7 @@ for check in "$@"; do
       # private commit checks that tree once the upstream commit's own ci run
       # is proven green (no published runtime is needed between releases).
       ccvl_select_rust_toolchain >&2
-      "${CCVL_CARGO_COMMAND[@]}" run --locked --quiet --bin ccvl -- private-check
+      "${CCVL_CARGO_COMMAND[@]}" run --locked --quiet --bin cv -- private-check
       ;;
     release-*)
       bash .agent/scripts/release-ci.sh "${check#release-}"

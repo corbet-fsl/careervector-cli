@@ -802,7 +802,7 @@ fn resolved_typ_text(
         write!(provenance, "\n// {key}: {value}").expect("writing to a String is infallible");
     }
     format!(
-        "// Resolved customization copy emitted by `ccvl build-opportunity {organisation} {position}`.\n\
+        "// Resolved customization copy emitted by `cv build-opportunity {organisation} {position}`.\n\
          // {provenance}\n\
          // Do not edit: this file is regenerated on every build. It compiles standalone and reproduces the neighbouring PDF.\n\
          {resolved}"

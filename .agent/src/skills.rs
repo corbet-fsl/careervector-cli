@@ -66,11 +66,11 @@ impl fmt::Display for EvaluationFailure {
 impl Error for EvaluationFailure {}
 
 pub fn validate(workspace: &Workspace) -> Result<()> {
-    let manifest = workspace.read_json("ccvl.json")?;
+    let manifest = workspace.read_json("cv.json")?;
     let declared = manifest
         .get("skills")
         .and_then(Value::as_array)
-        .context("ccvl.json has no skill list")?
+        .context("cv.json has no skill list")?
         .iter()
         .map(|item| {
             item.as_str()
@@ -80,12 +80,12 @@ pub fn validate(workspace: &Workspace) -> Result<()> {
         .collect::<Result<Vec<_>>>()?;
     ensure!(
         !declared.is_empty() && declared.iter().collect::<BTreeSet<_>>().len() == declared.len(),
-        "ccvl.json: skills must be a non-empty array without duplicates"
+        "cv.json: skills must be a non-empty array without duplicates"
     );
     let canonical = skill_paths(&workspace.path(".agent/skills"))?;
     ensure!(
         declared.iter().collect::<BTreeSet<_>>() == canonical.keys().collect(),
-        "ccvl.json skill manifest and canonical skills differ"
+        "cv.json skill manifest and canonical skills differ"
     );
     let name_pattern = Regex::new(r"^[a-z0-9-]{1,64}$")?;
     for (name, path) in &canonical {
@@ -1132,7 +1132,7 @@ mod tests {
     #[test]
     fn saved_responses_keep_strict_scores_without_inventing_inference_provenance() {
         let directory = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}").unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         let cases = cases();
         let cases_path = directory.path().join("cases.json");
@@ -1191,7 +1191,7 @@ mod tests {
     #[test]
     fn invalid_saved_inputs_report_configuration_without_claiming_a_provider() {
         let directory = tempdir().unwrap();
-        fs::write(directory.path().join("ccvl.json"), "{}").unwrap();
+        fs::write(directory.path().join("cv.json"), "{}").unwrap();
         let workspace = Workspace::at(directory.path()).unwrap();
         let output = directory.path().join("report.json");
         let missing = directory.path().join("missing.json");

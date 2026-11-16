@@ -1,6 +1,6 @@
 //! Source-bound native packages and release receipts shared by CI providers.
 //!
-//! Maintainer route, hidden from the normal help: `ccvl release-evidence
+//! Maintainer route, hidden from the normal help: `cv release-evidence
 //! <source|native|cross|attest|gate|check|platforms|version>`. The release scripts call it; see
 //! `.agent/docs/releases.md`.
 
@@ -201,7 +201,7 @@ pub enum Command {
     Attest {
         #[arg(long, value_parser = platform_names())]
         platform: String,
-        /// The executor's report (`ccvl-<platform>.native-result.json` is made of it).
+        /// The executor's report (`cv-<platform>.native-result.json` is made of it).
         #[arg(long)]
         result: PathBuf,
         /// The directory holding the cross-built package of the platform and its receipt.
@@ -535,7 +535,7 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
         "Cargo.lock",
         "rust-toolchain.toml",
         ".agent/build.rs",
-        "ccvl.json",
+        "cv.json",
     ];
     if !required
         .iter()
@@ -701,15 +701,11 @@ fn native(root: &Path, env: &Env, arguments: &NativeArguments) -> Result<()> {
     let output = arguments.output.canonicalize()?;
     let platform = arguments.platform;
     let name = format!(
-        "ccvl-{platform}{}",
+        "cv-{platform}{}",
         if windows(platform) { ".exe" } else { "" }
     );
-    let exe = if windows(platform) {
-        "ccvl.exe"
-    } else {
-        "ccvl"
-    };
-    let archive_name = format!("ccvl-{platform}.tar.gz");
+    let exe = if windows(platform) { "cv.exe" } else { "cv" };
+    let archive_name = format!("cv-{platform}.tar.gz");
     let binary_path = output.join(&name);
     if binary_path.exists() && file_sha256(&binary_path)? != file_sha256(&binary)? {
         return fail("Output already contains a different native executable.");
@@ -725,7 +721,7 @@ fn native(root: &Path, env: &Env, arguments: &NativeArguments) -> Result<()> {
     if archive_path.exists() {
         return fail("Package already exists; retain it and use a new attempt directory.");
     }
-    let runtime_entry = format!(".agent/cache/ccvl/bin/{exe}");
+    let runtime_entry = format!(".agent/cache/cv/bin/{exe}");
     archive::write_tar_gz(
         &archive_path,
         files
@@ -771,7 +767,7 @@ fn native(root: &Path, env: &Env, arguments: &NativeArguments) -> Result<()> {
         receipt.insert("tool".into(), json!(tool));
     }
     write_json(
-        &output.join(format!("ccvl-{platform}.receipt.json")),
+        &output.join(format!("cv-{platform}.receipt.json")),
         &Value::Object(receipt),
     )
 }
@@ -785,10 +781,10 @@ fn verify_package(
     identity: &Identity,
 ) -> Result<String> {
     let name = format!(
-        "ccvl-{platform}{}",
+        "cv-{platform}{}",
         if windows(platform) { ".exe" } else { "" }
     );
-    let expected_names: BTreeSet<String> = [name.clone(), format!("ccvl-{platform}.tar.gz")].into();
+    let expected_names: BTreeSet<String> = [name.clone(), format!("cv-{platform}.tar.gz")].into();
     let assets = receipt
         .get("assets")
         .and_then(Value::as_object)
@@ -815,7 +811,7 @@ fn verify_package(
 }
 
 fn native_result_name(platform: &str) -> String {
-    format!("ccvl-{platform}.native-result.json")
+    format!("cv-{platform}.native-result.json")
 }
 
 /// The report of the native executor is about this very executable and this source,
@@ -888,7 +884,7 @@ fn verify_native_result(
     if receipt.get("native_result").and_then(Value::as_str) != Some(name.as_str()) || !path.exists()
     {
         return fail(format!(
-            "Missing native executor report: {platform} (ccvl release-evidence attest)"
+            "Missing native executor report: {platform} (cv release-evidence attest)"
         ));
     }
     if receipt.get("native_result_sha256").and_then(Value::as_str)
@@ -912,7 +908,7 @@ fn attest(root: &Path, env: &Env, platform: &str, result: &Path, output: &Path) 
         ));
     }
     let host = host_of(platform).unwrap_or_default();
-    let receipt_path = output.join(format!("ccvl-{platform}.receipt.json"));
+    let receipt_path = output.join(format!("cv-{platform}.receipt.json"));
     let cross = load(&receipt_path)?;
     identity_equal(&cross, &identity)?;
     let field = |name: &str| cross.get(name).and_then(Value::as_str);
@@ -971,7 +967,7 @@ fn gate(root: &Path, env: &Env, name: &str, output: &Path) -> Result<()> {
     receipt.insert("kind".into(), "gate".into());
     receipt.insert("gate".into(), name.into());
     if matches!(name, "linux-deep" | "archive") {
-        let path = output.join("ccvl-linux-x86_64.receipt.json");
+        let path = output.join("cv-linux-x86_64.receipt.json");
         identity_equal(&load(&path)?, &identity)?;
         receipt.insert("native_receipt_sha256".into(), file_sha256(&path)?.into());
     }
@@ -1015,14 +1011,14 @@ fn check(root: &Path, env: &Env, output: &Path, complete: bool) -> Result<()> {
     let platforms = release_platforms(root)?;
     let expected_native: BTreeSet<String> = platforms
         .iter()
-        .map(|platform| format!("ccvl-{platform}.receipt.json"))
+        .map(|platform| format!("cv-{platform}.receipt.json"))
         .collect();
     for entry in
         fs::read_dir(output).with_context(|| format!("cannot read {}", output.display()))?
     {
         let name = entry?.file_name().to_string_lossy().into_owned();
-        if name.len() >= "ccvl-.receipt.json".len()
-            && name.starts_with("ccvl-")
+        if name.len() >= "cv-.receipt.json".len()
+            && name.starts_with("cv-")
             && name.ends_with(".receipt.json")
             && !expected_native.contains(&name)
         {
@@ -1038,7 +1034,7 @@ fn check(root: &Path, env: &Env, output: &Path, complete: bool) -> Result<()> {
     for platform in &platforms {
         let host = host_of(platform).unwrap_or_default();
         let plan = plan_of(platform).unwrap_or(Plan::Native);
-        let file = format!("ccvl-{platform}.receipt.json");
+        let file = format!("cv-{platform}.receipt.json");
         let path = output.join(&file);
         if !path.exists() && PENDING_ALLOWED.contains(&platform.as_str()) {
             if complete {
@@ -1114,8 +1110,8 @@ fn check(root: &Path, env: &Env, output: &Path, complete: bool) -> Result<()> {
         }
         if matches!(name, "linux-deep" | "archive") {
             let native = receipts
-                .get("ccvl-linux-x86_64.receipt.json")
-                .context("ccvl-linux-x86_64.receipt.json")?;
+                .get("cv-linux-x86_64.receipt.json")
+                .context("cv-linux-x86_64.receipt.json")?;
             if field("native_receipt_sha256") != Some(native.as_str()) {
                 return fail("Linux verification used a different native package.");
             }

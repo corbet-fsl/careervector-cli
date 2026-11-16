@@ -1,6 +1,6 @@
 # Skill map
 
-ccvl declares nine canonical skills in `ccvl.json`. Together they
+ccvl declares nine canonical skills in `cv.json`. Together they
 cover the portable application lifecycle without creating another data domain.
 
 | Skill | Owns | Does not own |

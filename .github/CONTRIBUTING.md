@@ -7,8 +7,8 @@ portability boundaries.
    documents, credentials, or third-party confidential material.
 2. Keep third-party code isolated and record its exact source, revision,
    copyright, and license.
-3. Run `bash ./ccvl check` and `bash ./ccvl public-check` before opening a pull
-   request (or use `.\ccvl.cmd` on Windows).
+3. Run `bash ./cv check` and `bash ./cv public-check` before opening a pull
+   request (or use `.\cv.cmd` on Windows).
 4. Explain any intentional rendering difference and include page-count evidence.
 
 Every external pull request must contain the exact affirmation required by the

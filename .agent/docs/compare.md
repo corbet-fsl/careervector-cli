@@ -1,6 +1,6 @@
 # Comparing variants side by side
 
-`ccvl compare` renders two or more variants of a CV or cover letter and
+`cv compare` renders two or more variants of a CV or cover letter and
 assembles them into one review PDF, so the same page of every variant sits
 side by side. A variant can be a style, a substyle, a locale, a page preset,
 an application record, one of its kept variants, or a PDF from an older
@@ -8,13 +8,13 @@ build. Comparisons are review material: they live in `.agent/cache/` and are
 never committed.
 
 ```sh
-bash ./ccvl compare [--doc <document>] [--locale <locale>] [--pages <preset>]
+bash ./cv compare [--doc <document>] [--locale <locale>] [--pages <preset>]
                     [--only <pages>] [--layout interleaved|sheet] [--name <name>]
                     [--png] [--metrics] [--json] <item> <item> [<item>...]
 ```
 
-On Windows, use `.\ccvl.cmd compare` with the same arguments.
-`bash ./ccvl compare --help` repeats the item forms and examples.
+On Windows, use `.\cv.cmd compare` with the same arguments.
+`bash ./cv compare --help` repeats the item forms and examples.
 
 ## Items
 
@@ -129,19 +129,19 @@ each finding as `measure` reports it. PDF items show `n/a`.
 Two styles, opening pages only:
 
 ```sh
-bash ./ccvl compare harvard/d-plus cluster/d-plus --only 1
+bash ./cv compare harvard/d-plus cluster/d-plus --only 1
 ```
 
 Three substyles at four pages, as sheets with previews to inspect:
 
 ```sh
-bash ./ccvl compare harvard/d-plus harvard/compact harvard/standard --pages 4 --layout sheet --png
+bash ./cv compare harvard/d-plus harvard/compact harvard/standard --pages 4 --layout sheet --png
 ```
 
 An application against its kept variants, with measurements:
 
 ```sh
-bash ./ccvl compare opportunities/acme/lead \
+bash ./cv compare opportunities/acme/lead \
   opportunities/acme/lead/variants/harvard/d-plus/values \
   opportunities/acme/lead/variants/cluster/d-plus/draft --metrics
 ```
@@ -149,13 +149,13 @@ bash ./ccvl compare opportunities/acme/lead \
 German against English:
 
 ```sh
-bash ./ccvl compare harvard/d-plus@de-ch harvard/d-plus@en-ch
+bash ./cv compare harvard/d-plus@de-ch harvard/d-plus@en-ch
 ```
 
 Two page presets of one substyle:
 
 ```sh
-bash ./ccvl compare harvard/d-plus:2 harvard/d-plus:4
+bash ./cv compare harvard/d-plus:2 harvard/d-plus:4
 ```
 
 The current rendering against a PDF from an older build:
@@ -163,7 +163,7 @@ The current rendering against a PDF from an older build:
 ```sh
 mkdir -p .agent/cache/old
 git show HEAD~5:outputs/cvl/cv/harvard/d-plus/en/ch/pdf/cv-4.pdf > .agent/cache/old/cv-4.pdf
-bash ./ccvl compare .agent/cache/old/cv-4.pdf harvard/d-plus:4
+bash ./cv compare .agent/cache/old/cv-4.pdf harvard/d-plus:4
 ```
 
 Opportunity PDFs are stored with Git LFS, so `git show` returns a pointer for
@@ -172,5 +172,5 @@ them; check out the older revision in a separate worktree and pass its PDF.
 Two cover letter substyles, summarized for an agent:
 
 ```sh
-bash ./ccvl compare --doc cl harvard/frame harvard/left-rule --json
+bash ./cv compare --doc cl harvard/frame harvard/left-rule --json
 ```

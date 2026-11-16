@@ -12,11 +12,11 @@ build = ".agent/build.rs"
 resolver = "3"
 
 [lib]
-name = "ccvl"
+name = "careervector_cli"
 path = ".agent/src/lib.rs"
 
 [[bin]]
-name = "ccvl"
+name = "cv"
 path = ".agent/src/main.rs"
 
 # Maintainer release and private downstream routes are tested through the real CLI.

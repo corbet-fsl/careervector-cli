@@ -51,7 +51,7 @@ recruiter can understand and a specialist can recognise.
 Swiss grades run 1–6 with 6.0 as the best note (5.5 very good, 5 good,
 4.5 satisfactory, 4 pass, below 4 fail) — the inverse of the German scale,
 where 1.0 is best. Numeric equivalents follow `cgrade` (modified Bavarian
-formula); `ccvl` defines only display, never its own conversion table.
+formula); `cv` defines only display, never its own conversion table.
 For records aimed at a Swiss audience the CH grade leads, in dot display
 with an explicit scale tag: the `6.0 (CH)` pattern (`<grade> (CH)`),
 optionally paired with the evidenced German equivalent where the record
@@ -80,5 +80,5 @@ reviewer judgment, as do enumeration structure, clause commas, and
 keyword prioritisation. Review checks punctuation on the rendered text.
 
 Underfill and overflow past the closing-line maximum fail: add relevant,
-verified signal or tighten the wording, then run `bash ./ccvl measure` or
-`.\ccvl.cmd measure` again. Never pass measurement by adding filler.
+verified signal or tighten the wording, then run `bash ./cv measure` or
+`.\cv.cmd measure` again. Never pass measurement by adding filler.

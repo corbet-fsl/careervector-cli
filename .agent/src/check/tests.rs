@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn checked_artifacts_reject_existing_directories_and_failed_checks_publish_nothing() {
     let temporary = TempDir::new().unwrap();
-    fs::write(temporary.path().join("ccvl.json"), "{}").unwrap();
+    fs::write(temporary.path().join("cv.json"), "{}").unwrap();
     let workspace = Workspace::at(temporary.path()).unwrap();
     let artifacts = temporary.path().join("artifacts");
     let error = run_with_artifacts(&workspace, Some(&artifacts)).unwrap_err();

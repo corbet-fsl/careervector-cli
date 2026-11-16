@@ -153,8 +153,8 @@ invalidate the review. Changed evidence, rules or scope require a new run.
 
 ## Completion and limits
 
-Submit the actual result with `ccvl review submit <run-dir> <result.json>` and
-read `ccvl review status <run-dir>`. Command success means the command completed;
+Submit the actual result with `cv review submit <run-dir> <result.json>` and
+read `cv review status <run-dir>`. Command success means the command completed;
 the returned state determines readiness. Do not author an approval state
 yourself. Report actual token usage, or null when provider telemetry is
 unavailable; never invent counts. Cite JSON fields

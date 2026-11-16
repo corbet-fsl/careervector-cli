@@ -51,18 +51,18 @@ esac
 
 # The runtime whose embedded identity matches this checkout. A missing release
 # is reported, never compiled here: that is an explicit developer action.
-current_runtime() { bash ./ccvl runtime-id >/dev/null 2>&1; }
+current_runtime() { bash ./cv runtime-id >/dev/null 2>&1; }
 if current_runtime; then
   summary+=("ccvl runtime current")
 else
   # setup ends with a full check; installation is judged by the runtime itself.
   setup_status=0
-  setup_log="$(bash ./ccvl setup 2>&1)" || setup_status=$?
+  setup_log="$(bash ./cv setup 2>&1)" || setup_status=$?
   if ! current_runtime; then
     printf '%s\n' "$setup_log" | tail -n 3 >&2
-    summary+=("ccvl runtime NOT installed (no matching release); build it with: bash ./ccvl setup --from-source")
+    summary+=("ccvl runtime NOT installed (no matching release); build it with: bash ./cv setup --from-source")
   elif ((setup_status)); then
-    summary+=("installed ccvl runtime; its check reported problems: run bash ./ccvl check")
+    summary+=("installed ccvl runtime; its check reported problems: run bash ./cv check")
   else
     summary+=("installed ccvl runtime")
   fi

@@ -24,10 +24,10 @@ Items:
   old/cv-4.pdf              an existing PDF, used as is
 
 Examples:
-  ccvl compare harvard/d-plus cluster/d-plus
-  ccvl compare harvard/d-plus harvard/compact harvard/standard --pages 4 --layout sheet
-  ccvl compare harvard/d-plus@de-ch harvard/d-plus@en-ch --only 1
-  ccvl compare --doc cl harvard/frame harvard/left-rule --png --json
+  cv compare harvard/d-plus cluster/d-plus
+  cv compare harvard/d-plus harvard/compact harvard/standard --pages 4 --layout sheet
+  cv compare harvard/d-plus@de-ch harvard/d-plus@en-ch --only 1
+  cv compare --doc cl harvard/frame harvard/left-rule --png --json
 
 Output: .agent/cache/comparisons/<name>.pdf (rendered variants and previews in
 .agent/cache/comparisons/<name>/). Interleaved pages run 1A 1B ... 1N, 2A ...;
@@ -35,7 +35,7 @@ see .agent/docs/compare.md.";
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "ccvl",
+    name = "cv",
     version,
     about = "Deterministic CV and cover-letter compiler"
 )]
@@ -158,7 +158,7 @@ enum Command {
     ListStyles,
     /// Explain merged adapter settings and the source of each value as JSON.
     ExplainStyle {
-        /// Any document declared in ccvl.json, such as cv, cl or flyers.
+        /// Any document declared in cv.json, such as cv, cl or flyers.
         document: String,
         locale: String,
         #[arg(long)]
@@ -220,7 +220,7 @@ enum Command {
         #[arg(long)]
         paper: Option<String>,
     },
-    /// Build one document of any type declared in ccvl.json, such as cv, cl,
+    /// Build one document of any type declared in cv.json, such as cv, cl,
     /// flyers or presentations.
     BuildOutput {
         document: String,
@@ -251,7 +251,7 @@ enum Command {
         #[arg(required = true, num_args = 2.., value_name = "ITEM")]
         items: Vec<String>,
         /// Document to render for style and record items: any document
-        /// declared in ccvl.json.
+        /// declared in cv.json.
         #[arg(long = "doc", default_value = "cv")]
         document: String,
         /// Locale for style items without `@<locale>`; defaults to en-ch when
@@ -403,10 +403,10 @@ pub fn run() -> Result<ExitCode> {
         Command::Setup => {
             doctor(&workspace)?;
             check::run(&workspace)?;
-            println!("ccvl is ready. No external runtime or fonts are required.");
+            println!("cv is ready. No external runtime or fonts are required.");
         }
         Command::Bootstrap => {
-            println!("ccvl bootstrap plan");
+            println!("cv bootstrap plan");
             println!(
                 "platform: {}-{}",
                 std::env::consts::OS,
@@ -716,7 +716,7 @@ fn doctor(workspace: &Workspace) -> Result<()> {
         ctypst::fonts::documents().len() == 16,
         "embedded font set is incomplete"
     );
-    println!("ccvl {}", env!("CARGO_PKG_VERSION"));
+    println!("cv {}", env!("CARGO_PKG_VERSION"));
     println!(
         "platform: {}-{}",
         std::env::consts::OS,

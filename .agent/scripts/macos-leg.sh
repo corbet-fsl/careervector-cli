@@ -102,19 +102,19 @@ package="$scratch/package"
 mkdir -p "$package"
 bash .agent/scripts/native-release.sh macos-x86_64 "$package"
 # The tested macOS executable is the evidence command from here on.
-export CCVL_RELEASE_EVIDENCE_BIN="$package/ccvl-macos-x86_64"
+export CCVL_RELEASE_EVIDENCE_BIN="$package/cv-macos-x86_64"
 stage 'macos-arm64: cross build, package'
 bash .agent/scripts/cross-release.sh macos-arm64 "$package"
 
 # 7. The evidence must be that of the Linux run: one source, one lock, one runtime identity.
 stage 'Evidence'
 mkdir -p "$scratch/draft"
-if "$CCID_BIN" release fetch ccvl-linux-x86_64.receipt.json --into "$scratch/draft" 2>/dev/null; then
-  mv -- "$scratch/draft/ccvl-linux-x86_64.receipt.json" "$scratch/linux.receipt.json"
+if "$CCID_BIN" release fetch cv-linux-x86_64.receipt.json --into "$scratch/draft" 2>/dev/null; then
+  mv -- "$scratch/draft/cv-linux-x86_64.receipt.json" "$scratch/linux.receipt.json"
   identity='{schema, repository, source_commit, source_sha256, cargo_lock_sha256, runtime_id}'
   jq -S "$identity" "$scratch/linux.receipt.json" > "$scratch/linux.identity"
   for platform in macos-x86_64 macos-arm64; do
-    jq -S "$identity" "$package/ccvl-$platform.receipt.json" > "$scratch/$platform.identity"
+    jq -S "$identity" "$package/cv-$platform.receipt.json" > "$scratch/$platform.identity"
     cmp -s -- "$scratch/linux.identity" "$scratch/$platform.identity" \
       || refuse "The receipt of $platform differs from the Linux receipt in source, lock or runtime identity."
   done
@@ -123,20 +123,20 @@ else
   echo 'The draft holds no Linux receipt to compare with; the promotion checks the identities.'
 fi
 jq -e '.kind == "native" and .platform == "macos-x86_64" and .rust_host == "x86_64-apple-darwin"' \
-  "$package/ccvl-macos-x86_64.receipt.json" >/dev/null || refuse 'The macos-x86_64 receipt is not a native one.'
+  "$package/cv-macos-x86_64.receipt.json" >/dev/null || refuse 'The macos-x86_64 receipt is not a native one.'
 jq -e '.kind == "cross" and .tested == false and .platform == "macos-arm64" and .rust_host == "aarch64-apple-darwin"' \
-  "$package/ccvl-macos-arm64.receipt.json" >/dev/null || refuse 'The macos-arm64 receipt is not a built-only cross receipt.'
+  "$package/cv-macos-arm64.receipt.json" >/dev/null || refuse 'The macos-arm64 receipt is not a built-only cross receipt.'
 
 # 8. Into the draft: the files first, the receipt of a platform last (a receipt means the
 # platform is complete). A file the draft holds with other bytes is replaced; the same is left.
 # `ccid release put` checks every upload by size on the release itself.
 stage 'The draft: upload'
 for platform in macos-x86_64 macos-arm64; do
-  for name in "ccvl-$platform" "ccvl-$platform.sha256" "ccvl-$platform.runtime-id" \
-    "ccvl-$platform.tar.gz" "ccvl-$platform.tar.gz.sha256" "ccvl-$platform.receipt.json"; do
+  for name in "cv-$platform" "cv-$platform.sha256" "cv-$platform.runtime-id" \
+    "cv-$platform.tar.gz" "cv-$platform.tar.gz.sha256" "cv-$platform.receipt.json"; do
     "$CCID_BIN" release put "$package/$name"
   done
 done
 printf 'macos-x86_64: tested in the clone (%s tests, public check, runtime checks), sha256 %s\n' \
-  "${passed_failed% *}" "$(sha256 "$package/ccvl-macos-x86_64")"
-printf 'macos-arm64: built, never run, sha256 %s\n' "$(sha256 "$package/ccvl-macos-arm64")"
+  "${passed_failed% *}" "$(sha256 "$package/cv-macos-x86_64")"
+printf 'macos-arm64: built, never run, sha256 %s\n' "$(sha256 "$package/cv-macos-arm64")"

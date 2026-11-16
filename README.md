@@ -70,19 +70,19 @@ started](.agent/docs/getting-started.md).
 ```sh
 git clone <ccvl repository URL> ccvl
 cd ccvl
-bash ./ccvl setup
-bash ./ccvl check
-bash ./ccvl build
-bash ./ccvl new-opportunity example-org strategy-lead
+bash ./cv setup
+bash ./cv check
+bash ./cv build
+bash ./cv new-opportunity example-org strategy-lead
 # Complete the new application.toml with the ccvl-apply skill, then:
-bash ./ccvl build-opportunity example-org strategy-lead
+bash ./cv build-opportunity example-org strategy-lead
 ```
 
 Generated general documents are written to
 `outputs/cvl/cv/<style>/<substyle>/<language>/<region>/pdf/cv-{2,3,4}.pdf` and
 `outputs/cvl/cl/<style>/<substyle>/<language>/<region>/pdf/cl.pdf`.
 The shipped Harvard CV substyles are `d-plus` (the default), `standard`, `compact` and `aligned`;
-cover-letter substyles are `frame` (the default) and `left-rule`. `bash ./ccvl list-styles` shows every
+cover-letter substyles are `frame` (the default) and `left-rule`. `bash ./cv list-styles` shows every
 style, substyle and empty slot. Use `build-cv en-ch 4 --style harvard --substyle compact` or
 `build-cl en-ch --style harvard --substyle frame` with your platform launcher.
 Other output documents land in
@@ -105,8 +105,8 @@ For an existing checkout, setup downloads the checksum-verified runtime that
 matches its compiler source. It rejects older binaries, and every launcher
 checks the installed runtime again before executing a command. Personal CV,
 interview, and opportunity changes do not require recompilation. Developers
-can explicitly opt into a locked source build with `bash ./ccvl setup
---from-source` on Linux/macOS or `.\ccvl.cmd setup --from-source` on Windows.
+can explicitly opt into a locked source build with `bash ./cv setup
+--from-source` on Linux/macOS or `.\cv.cmd setup --from-source` on Windows.
 These native developer paths do not establish binary release support on those
 other platforms.
 

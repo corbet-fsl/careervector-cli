@@ -13,12 +13,12 @@ function Add-Check([string]$Id, [string]$Name, [bool]$Ok, [string]$Detail) {
 }
 # The executable runs from the clone's own disk: memory-mapped reads from the share fail.
 # A copy from the share can fail in-page and drop the file: retry, and compare the size.
-$exe = Join-Path $work 'ccvl.exe'
+$exe = Join-Path $work 'cv.exe'
 $copied = $false
 for ($try = 1; $try -le 5 -and -not $copied; $try++) {
     try {
-        Copy-Item -LiteralPath 'W:\job\ccvl-windows-x86_64.exe' -Destination $exe -Force -ErrorAction Stop
-        $copied = (Get-Item -LiteralPath $exe).Length -eq (Get-Item -LiteralPath 'W:\job\ccvl-windows-x86_64.exe').Length
+        Copy-Item -LiteralPath 'W:\job\cv-windows-x86_64.exe' -Destination $exe -Force -ErrorAction Stop
+        $copied = (Get-Item -LiteralPath $exe).Length -eq (Get-Item -LiteralPath 'W:\job\cv-windows-x86_64.exe').Length
     } catch { Start-Sleep -Seconds 2 }
 }
 $hash = if ($copied) { (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvariant() } else { 'not copied' }

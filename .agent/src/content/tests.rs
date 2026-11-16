@@ -13,7 +13,7 @@ fn fixture() -> (tempfile::TempDir, Workspace) {
     let root = temporary.path();
     write(
         root,
-        "ccvl.json",
+        "cv.json",
         &json!({"documents": {"cv": {"root": "outputs/cvl/cv"}, "cl": {"root": "outputs/cvl/cl"}}})
             .to_string(),
     );
@@ -207,9 +207,9 @@ fn shared_letter_does_not_read_or_observe_an_absent_or_malformed_cv_root() {
     let path = "outputs/cvl/cl/first/one/en/ch/content.toml";
     for malformed in [false, true] {
         if malformed {
-            let mut manifest = workspace.read_json("ccvl.json").unwrap();
+            let mut manifest = workspace.read_json("cv.json").unwrap();
             manifest["documents"]["cv"]["root"] = 123.into();
-            write(workspace.root(), "ccvl.json", &manifest.to_string());
+            write(workspace.root(), "cv.json", &manifest.to_string());
         }
         let observed = workspace.tracked();
         let resolved = read_record(&observed, path).unwrap();
@@ -255,7 +255,7 @@ fn shared_family_renderers_ignore_missing_and_malformed_opposite_contracts() {
         let temporary = tempfile::tempdir().unwrap();
         let root = temporary.path();
         for relative in [
-            "ccvl.json",
+            "cv.json",
             ".agent/typst",
             "outputs/cvl/shared/ledger",
             "inputs/profile.toml",

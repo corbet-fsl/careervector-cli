@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Locate the maintainer `release-evidence` command of the ccvl binary.
+# Locate the maintainer `release-evidence` command of the cv binary.
 # Source this file, run ccvl_prepare_release_evidence once in the calling shell,
 # then run "${CCVL_RELEASE_EVIDENCE_COMMAND[@]}" <subcommand> ... anywhere.
 #
-# CCVL_RELEASE_EVIDENCE_BIN names an already built ccvl binary (the native
+# CCVL_RELEASE_EVIDENCE_BIN names an already built cv binary (the native
 # build uses the one it just compiled). Without it the command runs from this
 # checkout with the existing Rust toolchain; nothing is installed.
 
@@ -22,5 +22,5 @@ ccvl_prepare_release_evidence() {
   fi
   export CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG:-0}"
   # shellcheck disable=SC2034 # Read by the sourcing script.
-  CCVL_RELEASE_EVIDENCE_COMMAND=("${CCVL_CARGO_COMMAND[@]}" run --locked --quiet --bin ccvl -- release-evidence)
+  CCVL_RELEASE_EVIDENCE_COMMAND=("${CCVL_CARGO_COMMAND[@]}" run --locked --quiet --bin cv -- release-evidence)
 }

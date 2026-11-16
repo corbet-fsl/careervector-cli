@@ -1,4 +1,4 @@
-//! `ccvl compare`: one review PDF that shows n document variants side by side.
+//! `cv compare`: one review PDF that shows n document variants side by side.
 //!
 //! Every item is a style selection, an application record or an existing
 //! PDF. Selections and records render freshly through the `build-cv` and
@@ -72,7 +72,7 @@ impl Layout {
     }
 }
 
-/// One `ccvl compare` invocation.
+/// One `cv compare` invocation.
 #[derive(Clone, Debug)]
 pub struct Request {
     /// `cv` or `cl`.
@@ -136,7 +136,7 @@ pub struct Variant {
     pub metrics: Option<Metrics>,
 }
 
-/// Line measurements of one rendered variant, as `ccvl measure` reports them.
+/// Line measurements of one rendered variant, as `cv measure` reports them.
 #[derive(Debug, Default, Serialize)]
 pub struct Metrics {
     pub measured_lines: usize,

@@ -62,8 +62,8 @@ asking the next question. Preserve the user's substance and uncertainty. Then
 update `inputs/interviews/stations.toml` and run the platform command:
 
 ```text
-Linux/macOS: bash ./ccvl profile-status
-Windows:     .\ccvl.cmd profile-status
+Linux/macOS: bash ./cv profile-status
+Windows:     .\cv.cmd profile-status
 ```
 
 Show the user the short page counts periodically, especially after a “nothing
@@ -199,7 +199,7 @@ that repeats it is pointed out.
 Treat `WARN` lines as linting: read each one, then fix the data or keep the
 deviation with a short written reason (`allow_drift = "<reason>"` on a fact
 or entry). Never silence a hint without a reason, and never treat a hint as
-proof that a claim is false. Show the user `bash ./ccvl profile-status
+proof that a claim is false. Show the user `bash ./cv profile-status
 --list` when they want to verify the whole record quickly.
 
 ## Completion gate
@@ -216,8 +216,8 @@ competency block on page 4. Do not mark compact standalone lines.
 Run:
 
 ```text
-Linux/macOS: bash ./ccvl profile-status --verify-sources
-Windows:     .\ccvl.cmd profile-status --verify-sources
+Linux/macOS: bash ./cv profile-status --verify-sources
+Windows:     .\cv.cmd profile-status --verify-sources
 ```
 
 That command must confirm the plan is ready and that both CV sources satisfy

@@ -32,7 +32,7 @@ value cannot hide behind a later override. Style-owned extension tables stay
 unrestricted. Native Typst still checks its own paper names, scripts, font
 metrics and rendering constraints.
 
-`bash ./ccvl explain-style cv en-ch --style cluster --substyle d-plus`
+`bash ./cv explain-style cv en-ch --style cluster --substyle d-plus`
 reports the merged inputs and source path for each effective value, without
 rendering. It covers the declared adapter merge, not component-level Typst
 show/set rules. For example, `page.paper` comes from the chosen paper preset, while

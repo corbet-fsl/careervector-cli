@@ -56,17 +56,17 @@ fn embed_engine_package(root: &Path) {
 }
 
 /// Generate `layout.rs`: every path of the `workspace_groups` table in
-/// `ccvl.json` as a constant named `<GROUP>_<KEY>`, each group's entries as
+/// `cv.json` as a constant named `<GROUP>_<KEY>`, each group's entries as
 /// `<GROUP>_GROUP`, plus the table itself, so
 /// the manifest is the single source of truth for workspace paths and the
 /// binary never has to read it to find them.
 fn embed_layout(root: &Path) {
-    let text = std::fs::read_to_string(root.join("ccvl.json")).expect("ccvl.json must exist");
-    let manifest: serde_json::Value = serde_json::from_str(&text).expect("ccvl.json must be JSON");
+    let text = std::fs::read_to_string(root.join("cv.json")).expect("cv.json must exist");
+    let manifest: serde_json::Value = serde_json::from_str(&text).expect("cv.json must be JSON");
     let groups = manifest
         .get("workspace_groups")
         .and_then(serde_json::Value::as_object)
-        .expect("ccvl.json needs a workspace_groups table");
+        .expect("cv.json needs a workspace_groups table");
     let mut source = String::new();
     for (group, entries) in groups {
         let entries = entries

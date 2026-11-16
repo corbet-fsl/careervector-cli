@@ -148,7 +148,7 @@ pub fn validate_style(
     let assessment = assess_with_contract(&document, crate::layout::INPUTS_STATIONS, &contract)?;
     if require_ready && !assessment.ready() {
         bail!(
-            "{}. Run ccvl profile-status and continue the profile interview",
+            "{}. Run cv profile-status and continue the profile interview",
             assessment.problems.join("; ")
         );
     }
@@ -428,7 +428,7 @@ fn validate_semantics(document: &Value, location: &str) -> Result<()> {
     Ok(())
 }
 
-/// `ccvl profile-status`: the station gate, then advisory hints. `list`
+/// `cv profile-status`: the station gate, then advisory hints. `list`
 /// prints the whole interview as Markdown instead of the gate.
 pub fn profile_status(
     workspace: &Workspace,

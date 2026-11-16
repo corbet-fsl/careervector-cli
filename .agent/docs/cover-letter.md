@@ -226,7 +226,7 @@ not a claim that every country requires one tone or argument recipe.
 
 ## Iteration contract
 
-Run `bash ./ccvl measure` or `.\ccvl.cmd measure`. A hard line, structure, or
+Run `bash ./cv measure` or `.\cv.cmd measure`. A hard line, structure, or
 layout violation fails. Rewrite with relevant, verified signal and rerun
 measurement; never respond by adding filler, inventing a claim, condensing the
 type, or weakening the bounds.

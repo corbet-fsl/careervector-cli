@@ -3,7 +3,7 @@
 Normal users download the Linux x86_64 workspace bundle from the
 latest release of the repository. Each
 archive contains the exact checked-in workspace plus its optimized native
-binary in `.agent/cache/ccvl/bin/`. Extract it and run the included dispatcher;
+binary in `.agent/cache/cv/bin/`. Extract it and run the included dispatcher;
 neither Git nor Rust is required.
 
 ## Required delivery path
@@ -29,7 +29,7 @@ release for every patch or minor version. And for Mac and Windows / arm even mor
 sparingly. We must keep down the compute."
 
 Nothing is a knob: the version in `Cargo.toml` (the only place it is written)
-decides everything, and `ccvl release-evidence version` is the one place that reads
+decides everything, and `cv release-evidence version` is the one place that reads
 it.
 
 - **The release is `v<version>`**, named the version (`0.1.0`), the one public
@@ -69,7 +69,7 @@ draft is resumed; `ccid release discard` clears one whose bytes cannot match). A
 release has no legs.
 
 The declared platform set is `.agent/release-platforms.txt`; a release holds all of
-it or, for a patch, `linux-x86_64`, as listed by `ccvl release-evidence platforms`.
+it or, for a patch, `linux-x86_64`, as listed by `cv release-evidence platforms`.
 Missing artifacts never shrink that set. Each platform holds one of three states:
 
 | State | Platforms | Evidence |
@@ -84,7 +84,7 @@ A `built` platform never claims tests, and a `pending` one has no asset. The sta
 of a fresh draft are not a state a release may end in: `windows-x86_64` is `built`
 until the Windows clone has tested it and the macOS platforms are `pending` until the
 macOS clone has built them. `release-promote` checks the set as **complete**
-(`ccvl release-evidence check --complete`): no platform `pending`, and the platforms
+(`cv release-evidence check --complete`): no platform `pending`, and the platforms
 that have a native executor (`windows-x86_64`, `macos-x86_64`) `tested` on it. A
 minor release whose legs have not all passed is refused, naming the leg to repair. The
 Linux aarch64 binary is linked by `cargo zigbuild`, and so is the Linux x86_64
@@ -184,20 +184,20 @@ runtime identity and the executables' checksums, and `SHA256SUMS`.
 ## Release evidence command
 
 Source identity, native packaging, gate receipts, verification and the
-platform policy are one hidden maintainer command of the ccvl binary, not a
+platform policy are one hidden maintainer command of the cv binary, not a
 separate helper language:
 
 ```text
-ccvl release-evidence source [--output FILE]
-ccvl release-evidence native --platform P --binary FILE --host TRIPLE \
+cv release-evidence source [--output FILE]
+cv release-evidence native --platform P --binary FILE --host TRIPLE \
   --rustc VERSION --cargo VERSION --output DIR
-ccvl release-evidence cross --platform P --binary FILE --host TRIPLE \
+cv release-evidence cross --platform P --binary FILE --host TRIPLE \
   --rustc VERSION --cargo VERSION --tool IDENTITY --output DIR
-ccvl release-evidence attest --platform P --result FILE --output DIR
-ccvl release-evidence gate rust|lint|linux-deep|archive --output DIR
-ccvl release-evidence check [--complete] --output DIR
-ccvl release-evidence platforms
-ccvl release-evidence version
+cv release-evidence attest --platform P --result FILE --output DIR
+cv release-evidence gate rust|lint|linux-deep|archive --output DIR
+cv release-evidence check [--complete] --output DIR
+cv release-evidence platforms
+cv release-evidence version
 ```
 
 It runs from the repository root (or `--root DIR`) and reads the CI source
@@ -223,7 +223,7 @@ Cargo target lock and runs the job command.
 | Job of `release.yml` | Check (from `[release]`) | Runner requirement |
 |---|---|---|
 | `release` | `release-build` (`.ci/release-build.sh`): the stages `rust`, `lint`, `native`, `cross`, `linux-deep`, `archive`, `check` in this order, never reused from a cache; before it `ccid release build` refuses a version that names no release or is released already, a source that is not `main` and a red verdict, and refreshes the third-party locks; after it ccid drafts the release and uploads every file | `linux` runner |
-| `release-windows` | `release-windows` (`.ci/run-windows.sh`): fetch the shipped `ccvl-windows-x86_64.exe` from the draft of this commit, run it and the gnullvm test suite in the offline Windows clone, then make the draft say `tested` | `windows` runner (an ordinary slot that owns the offline clone for the job) |
+| `release-windows` | `release-windows` (`.ci/run-windows.sh`): fetch the shipped `cv-windows-x86_64.exe` from the draft of this commit, run it and the gnullvm test suite in the offline Windows clone, then make the draft say `tested` | `windows` runner (an ordinary slot that owns the offline clone for the job) |
 | `release-macos` | `release-macos` (`.agent/scripts/macos-leg.sh`): build, test and package macOS in the macOS clone (below) | `macos` runner (the macOS build clone); the runner's read credential |
 | `release-promote` | `release-seal` (`.agent/scripts/release-seal.sh`): re-check the draft of this commit as complete (every platform leg has passed) and derive the two manifests; then ccid writes `SHA256SUMS` and makes it the public release `v<version>`; nothing is copied anywhere | `linux` runner |
 
@@ -247,7 +247,7 @@ holds no Windows executable.
 Otherwise it has three parts, all for the one ABI, `x86_64-pc-windows-gnullvm`.
 
 1. **The file that ships.** `windows-test.sh` reads the `build-<commit>` draft for the
-   Windows receipt and `ccvl-windows-x86_64.exe`, and stops unless the receipt (platform,
+   Windows receipt and `cv-windows-x86_64.exe`, and stops unless the receipt (platform,
    Rust host), the `.sha256` asset, the `.runtime-id` asset and the downloaded bytes all
    agree. The executable crosses into the clone (`vm-win`), which has no network and none
    of Julian's shares, and runs from the clone's own disk
@@ -270,20 +270,20 @@ Otherwise it has three parts, all for the one ABI, `x86_64-pc-windows-gnullvm`.
 3. **The native receipt.** `windows-test.sh` writes a JSON report: one entry per check
    (`sha256`, `architecture`, `version`, `runtime-id`, `public-check`, `test-suite`), the
    test counts, the activation facts of the clone and the compiler and tools of the test
-   build. `windows-attest.sh` fetches the draft, and `ccvl release-evidence attest`
+   build. `windows-attest.sh` fetches the draft, and `cv release-evidence attest`
    accepts the report only if it is about this very executable (its SHA-256 and runtime
    identity), this source commit and this platform, every check passed and the suite ran
    without a failure. It then re-issues the cross receipt as a **native** one
    (`checks: ["public-check", "native-runtime"]`, `tested` removed, the run that tested is
    the provenance, `built_by_run` and `cross_receipt_sha256` keep the build on record) and
-   keeps the report next to it as `ccvl-windows-x86_64.native-result.json`, whose checksum
+   keeps the report next to it as `cv-windows-x86_64.native-result.json`, whose checksum
    the receipt records. `release-evidence check` refuses a native Windows receipt without
    that report, with a report that was altered or that is not about the executable in the
    package: nobody can make a platform `tested` by editing a receipt. The manifests are
    written again by `check` itself, so promotion, which checks the whole draft once more,
    writes the same bytes; the draft then holds the new `receipt`, `manifest.json` and
    `runtime-manifest.json`, the report, and the replaced cross receipt as
-   `ccvl-windows-x86_64.cross-receipt.json`. Nothing is published, and a published release
+   `cv-windows-x86_64.cross-receipt.json`. Nothing is published, and a published release
    is never touched. Run twice, the second run changes nothing.
 
 The job fails if the executable or any test fails, and the draft is then left as it was.
@@ -374,7 +374,7 @@ One release per version, and the other names are identities, not releases:
 - `v<version>` is the public release: the tag of the version's commit, immutable.
   It holds every asset of the version: the released platforms' executables with
   their `.sha256` files and `.runtime-id` files, the workspace bundles
-  (`ccvl-<platform>.tar.gz` with checksums, the user-facing download including
+  (`cv-<platform>.tar.gz` with checksums, the user-facing download including
   current templates and documents), the native/gate receipts, the manifests
   (`manifest.json`, `runtime-manifest.json`) and `SHA256SUMS`, the checksums of every
   other asset, which a copy can verify against.
@@ -399,13 +399,13 @@ A published runtime is found by the version of the source, then proved by its
 checksum and identity, never by trust in the name:
 
 1. the source names its release: `v<version>`, the version in its `Cargo.toml`;
-2. `<releases>/v<version>/ccvl-linux-x86_64.sha256` and `.../ccvl-linux-x86_64`
+2. `<releases>/v<version>/cv-linux-x86_64.sha256` and `.../cv-linux-x86_64`
    are downloaded (a patch release holds Linux x86_64 and is enough for the
    Linux x86_64 downstream check);
 3. the executable must match the published checksum, and its `runtime-id` must
    equal the identity computed from the source being checked.
 
-`setup` does exactly this. (`ccvl private-check` no longer needs a published runtime:
+`setup` does exactly this. (`cv private-check` no longer needs a published runtime:
 between releases there is none, so it is anchored on the upstream commit's successful
 `ci` run, see [private-downstream](private-downstream.md).)
 A source whose runtime sources differ from the release of its version (any commit
@@ -417,8 +417,8 @@ prerequisite and are never answered with a source build.
 ## Source identity and setup
 
 The build embeds a SHA-256 identity over `Cargo.toml`,
-`Cargo.lock` (which pins the `ccvl` engine revision), `rust-toolchain.toml`,
-`.agent/build.rs`, `ccvl.json` (whose workspace paths the binary embeds), the
+`Cargo.lock` (which pins the `cv` engine revision), `rust-toolchain.toml`,
+`.agent/build.rs`, `cv.json` (whose workspace paths the binary embeds), the
 sorted Rust source files in `.agent/src/`, and the
 engine Typst package files (`*.typ`, `*.toml` and `*.json` directly in
 `.agent/typst/`), which the binary embeds. Each input contributes its relative path and SHA-256 digest; the

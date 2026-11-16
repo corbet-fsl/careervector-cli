@@ -7,11 +7,11 @@ trap 'rm -rf -- "$scratch"' EXIT
 fixture="$scratch/workspace"
 export PREVIEW_REAL_SHA256SUM
 PREVIEW_REAL_SHA256SUM="$(command -v sha256sum)"
-mkdir -p "$fixture/.agent/scripts" "$fixture/.agent/cache/ccvl/bin" \
+mkdir -p "$fixture/.agent/scripts" "$fixture/.agent/cache/cv/bin" \
   "$fixture/outputs/cvl/demo/pdf" "$scratch/bin"
 cp "$repo_root/.agent/scripts/render-previews.sh" "$fixture/.agent/scripts/"
 cp "$repo_root/.agent/scripts/runtime-id.sh" "$fixture/.agent/scripts/"
-cat > "$fixture/.agent/cache/ccvl/bin/ccvl" <<'BINARY'
+cat > "$fixture/.agent/cache/cv/bin/cv" <<'BINARY'
 #!/usr/bin/env bash
 set -euo pipefail
 [[ "$1" == list-documents ]]
@@ -42,7 +42,7 @@ if [[ "${1:-}" == */pdf/first.pdf && -f "$PREVIEW_FIXTURE/fail-hash" ]]; then
 fi
 exec "$PREVIEW_REAL_SHA256SUM" "$@"
 CHECKSUM
-chmod +x "$fixture/.agent/cache/ccvl/bin/ccvl" "$scratch/bin/pdftoppm" "$scratch/bin/sha256sum"
+chmod +x "$fixture/.agent/cache/cv/bin/cv" "$scratch/bin/pdftoppm" "$scratch/bin/sha256sum"
 export PREVIEW_FIXTURE="$scratch"
 export PATH="$scratch/bin:$PATH"
 printf 'Poppler fixture 1\n' > "$scratch/version"

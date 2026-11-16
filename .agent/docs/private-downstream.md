@@ -28,7 +28,7 @@ person's application.
 Keep the same domains as upstream: private user knowledge in `inputs/interviews/`, the
 approved general document in `outputs/cvl/`, and one keyed package at
 `opportunities/<organisation-key>/<position-key>/` for every concrete job.
-Create an opportunity with `ccvl new-opportunity`; do not maintain a second
+Create an opportunity with `cv new-opportunity`; do not maintain a second
 Markdown copy of the tailored fields in `application.toml`.
 
 ## Strict ownership policy
@@ -113,7 +113,7 @@ inventories again. Unsupported links, incomplete history, changed source, or an
 invalid upstream policy fail closed. CI files remain upstream-owned under
 `ccvl-downstream.json`.
 
-The route runs `ccvl private-check` (hidden maintainer command, built from the
+The route runs `cv private-check` (hidden maintainer command, built from the
 checked-out source by `ci-check.sh downstream-check`). The public upstream is
 named by the policy's `url` (`CCVL_UPSTREAM_URL` may override it to the same
 value); it is read from the forge that runs the job, because jobs have no route

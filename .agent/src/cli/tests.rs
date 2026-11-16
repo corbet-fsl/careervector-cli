@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn style_substyle_and_page_arguments_remain_independent() {
     let cv = Args::try_parse_from([
-        "ccvl",
+        "cv",
         "build-cv",
         "en-us",
         "1",
@@ -17,7 +17,7 @@ fn style_substyle_and_page_arguments_remain_independent() {
         matches!(cv.command, Command::BuildCv { pages: Some(1), style: Some(style), substyle: Some(substyle), .. } if style == "orbit" && substyle == "standard")
     );
     let cl = Args::try_parse_from([
-        "ccvl",
+        "cv",
         "build-cl",
         "en-us",
         "--pages",
@@ -32,7 +32,7 @@ fn style_substyle_and_page_arguments_remain_independent() {
         matches!(cl.command, Command::BuildCl { pages: Some(2), style: Some(style), substyle: Some(substyle), .. } if style == "postcard" && substyle == "standard")
     );
     let output = Args::try_parse_from([
-        "ccvl",
+        "cv",
         "build-output",
         "flyers",
         "de-ch",
@@ -52,7 +52,7 @@ fn style_substyle_and_page_arguments_remain_independent() {
 #[test]
 fn explain_style_accepts_document_locale_and_scoped_selection() {
     let args = Args::try_parse_from([
-        "ccvl",
+        "cv",
         "explain-style",
         "cl",
         "en-ch",
@@ -66,14 +66,13 @@ fn explain_style_accepts_document_locale_and_scoped_selection() {
         matches!(args.command, Command::ExplainStyle { document, locale, style: Some(style), substyle: Some(substyle), .. } if document == "cl" && locale == "en-ch" && style == "harvard" && substyle == "frame")
     );
     // Any document name parses; the workspace manifest decides which exist.
-    assert!(Args::try_parse_from(["ccvl", "explain-style", "flyers", "en-ch"]).is_ok());
+    assert!(Args::try_parse_from(["cv", "explain-style", "flyers", "en-ch"]).is_ok());
 }
 
 #[test]
 fn paper_arguments_do_not_add_a_locale_or_hierarchy_level() {
     for command in ["build-cv", "build-cl", "watch-cv", "watch-cl"] {
-        let args =
-            Args::try_parse_from(["ccvl", command, "en-ch", "--paper", "us-letter"]).unwrap();
+        let args = Args::try_parse_from(["cv", command, "en-ch", "--paper", "us-letter"]).unwrap();
         match args.command {
             Command::BuildCv { paper, .. }
             | Command::BuildCl { paper, .. }
@@ -82,15 +81,8 @@ fn paper_arguments_do_not_add_a_locale_or_hierarchy_level() {
             _ => panic!("unexpected command"),
         }
     }
-    let args = Args::try_parse_from([
-        "ccvl",
-        "explain-style",
-        "cv",
-        "en-ch",
-        "--paper",
-        "us-letter",
-    ])
-    .unwrap();
+    let args = Args::try_parse_from(["cv", "explain-style", "cv", "en-ch", "--paper", "us-letter"])
+        .unwrap();
     assert!(
         matches!(args.command, Command::ExplainStyle { paper: Some(paper), .. } if paper == "us-letter")
     );
@@ -100,7 +92,7 @@ fn paper_arguments_do_not_add_a_locale_or_hierarchy_level() {
 fn document_checks_accept_repeatable_style_filters() {
     for command in ["check", "public-check", "measure"] {
         let args = Args::try_parse_from([
-            "ccvl",
+            "cv",
             command,
             "--style",
             "cv/modern",
@@ -115,7 +107,7 @@ fn document_checks_accept_repeatable_style_filters() {
             other => panic!("unexpected command {other:?}"),
         };
         assert_eq!(styles, ["cv/modern", "cl/harvard"]);
-        let args = Args::try_parse_from(["ccvl", command]).unwrap();
+        let args = Args::try_parse_from(["cv", command]).unwrap();
         assert!(matches!(
             args.command,
             Command::Check { styles, .. } | Command::PublicCheck { styles, .. } | Command::Measure { styles, .. }
@@ -174,9 +166,7 @@ fn reserved_default_resolves_command_line_and_record_selections() {
 #[test]
 fn list_styles_is_a_workspace_command() {
     assert!(matches!(
-        Args::try_parse_from(["ccvl", "list-styles"])
-            .unwrap()
-            .command,
+        Args::try_parse_from(["cv", "list-styles"]).unwrap().command,
         Command::ListStyles
     ));
 }
@@ -184,7 +174,7 @@ fn list_styles_is_a_workspace_command() {
 #[test]
 fn compare_takes_two_or_more_items_and_global_options() {
     let args = Args::try_parse_from([
-        "ccvl",
+        "cv",
         "compare",
         "harvard/d-plus",
         "cluster/d-plus@de-ch:2",
@@ -234,16 +224,16 @@ fn compare_takes_two_or_more_items_and_global_options() {
         ("sheet", Some("openings"))
     );
     assert!(png && metrics && json);
-    let args = Args::try_parse_from(["ccvl", "compare", "default", "harvard/compact"]).unwrap();
+    let args = Args::try_parse_from(["cv", "compare", "default", "harvard/compact"]).unwrap();
     assert!(matches!(
         args.command,
         Command::Compare { document, layout, png: false, metrics: false, json: false, .. }
             if document == "cv" && layout == "interleaved"
     ));
     for invalid in [
-        &["ccvl", "compare", "harvard/d-plus"][..],
-        &["ccvl", "compare"],
-        &["ccvl", "compare", "a", "b", "--layout", "grid"],
+        &["cv", "compare", "harvard/d-plus"][..],
+        &["cv", "compare"],
+        &["cv", "compare", "a", "b", "--layout", "grid"],
     ] {
         assert!(Args::try_parse_from(invalid).is_err(), "{invalid:?}");
     }

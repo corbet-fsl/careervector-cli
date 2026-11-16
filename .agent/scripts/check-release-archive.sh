@@ -9,8 +9,8 @@ for tool in cargo rustc git; do
   fi
 done
 dist="$(cd "${1:?Missing native package directory}" && pwd)"
-receipt="$dist/ccvl-linux-x86_64.receipt.json"
-(cd "$dist" && sha256sum --check --strict ccvl-linux-x86_64.tar.gz.sha256)
+receipt="$dist/cv-linux-x86_64.receipt.json"
+(cd "$dist" && sha256sum --check --strict cv-linux-x86_64.tar.gz.sha256)
 # Receipt fields are generated as one JSON string per line. Accept only the
 # fixed public identity and hexadecimal values; this minimal executor needs no JSON tool.
 field() { sed -n 's/^  "'"$1"'": "\([^"]*\)"[,]*$/\1/p' "$receipt"; }
@@ -26,12 +26,12 @@ for value in "$source_hash" "$archive_hash" "$lock_hash" "$runtime_id"; do
 done
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/ccvl-archive.XXXXXXXX")"
 trap 'rm -rf -- "$scratch"' EXIT
-tar -xzf "$dist/ccvl-linux-x86_64.tar.gz" -C "$scratch"
+tar -xzf "$dist/cv-linux-x86_64.tar.gz" -C "$scratch"
 cd "$scratch"
 [[ ! -e .git ]]
 [[ $(sha256sum Cargo.lock | cut -d ' ' -f 1) == "$lock_hash" ]]
-[[ $(.agent/cache/ccvl/bin/ccvl runtime-id) == "$runtime_id" ]]
-bash ./ccvl setup
+[[ $(.agent/cache/cv/bin/cv runtime-id) == "$runtime_id" ]]
+bash ./cv setup
 provider=forgejo
 run="${GITHUB_RUN_ID:-}"
 [[ "$run" =~ ^[0-9]+$ && ${FORGEJO_ACTIONS:-} == true ]] || { echo 'Missing Forgejo Actions run identity.' >&2; exit 2; }

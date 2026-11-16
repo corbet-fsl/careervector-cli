@@ -105,7 +105,7 @@ It works for `--style`/`--substyle` on `build-output`, `build-cv`, `build-cl`, `
 `cv_style`, `cv_substyle`, `cl_style` and `cl_substyle`. No real style or
 substyle may be named `default`. An omitted selection resolves the same way.
 
-`bash ./ccvl list-styles` prints every document's grid as JSON: the resolved
+`bash ./cv list-styles` prints every document's grid as JSON: the resolved
 default style and substyle, then each style with its `status` (`designed` or
 `empty`) and its substyles in order, the first marked `"default": true`. The
 default style comes first, other designed styles follow alphabetically and
@@ -211,9 +211,9 @@ those selected outputs with tracked PDFs and render the other declared papers
 into temporary validation outputs.
 
 ```sh
-bash ./ccvl build-cv en-ch 4 --style harvard --substyle d-plus --paper a4
-bash ./ccvl build-cv en-ch 4 --style cluster --substyle d-plus --paper a4
-bash ./ccvl explain-style cv en-ch --style cluster --paper a4
+bash ./cv build-cv en-ch 4 --style harvard --substyle d-plus --paper a4
+bash ./cv build-cv en-ch 4 --style cluster --substyle d-plus --paper a4
+bash ./cv explain-style cv en-ch --style cluster --paper a4
 ```
 
 ## Rendering interface
@@ -267,13 +267,13 @@ style modules by absolute paths; see [Typst imports](#typst-imports).
 
 All 16 bundled ctypst font faces are available. A style may declare additional
 workspace font files; provide their redistribution licenses when publishing.
-`bash ./ccvl list-documents` lists every discovered output as JSON. `check`,
+`bash ./cv list-documents` lists every discovered output as JSON. `check`,
 `measure` and Linux independent PDF checks enumerate these same definitions.
 
 ```sh
-bash ./ccvl build-cv en-ch 4 --style harvard --substyle compact
-bash ./ccvl build-cl en-ch --style harvard --substyle frame
-bash ./ccvl build-output presentations de-ch --style scaffold
+bash ./cv build-cv en-ch 4 --style harvard --substyle compact
+bash ./cv build-cl en-ch --style harvard --substyle frame
+bash ./cv build-output presentations de-ch --style scaffold
 ```
 
 `build-output <document> <locale>` builds one leaf of any declared document,
@@ -289,8 +289,8 @@ While iterating on one style, limit document work with a repeatable
 `--style <document>/<style>` filter on `check`, `public-check` and `measure`:
 
 ```sh
-bash ./ccvl check --style cv/modern
-bash ./ccvl check --style cv/harvard --style cl/harvard
+bash ./cv check --style cv/modern
+bash ./cv check --style cv/harvard --style cl/harvard
 ```
 
 The filter limits rendering, line measurement, reproducibility, tracked-PDF
@@ -305,8 +305,8 @@ styles a change touches; see [Selecting CI checks](ci.md).
 Inspect the merged adapter inputs without compiling or creating outputs:
 
 ```sh
-bash ./ccvl explain-style cv en-ch --style cluster --substyle d-plus
-bash ./ccvl explain-style cl en-ch --style harvard --substyle frame
+bash ./cv explain-style cv en-ch --style cluster --substyle d-plus
+bash ./cv explain-style cl en-ch --style harvard --substyle frame
 ```
 
 The JSON lists sources in precedence order, merged `settings`, and `origins`
@@ -341,7 +341,7 @@ workspace. The cletter facade is the package's `correspondence` module:
 `#import correspondence: opening, salutation`.
 
 Styles and records name workspace assets by logical name, relative to the
-assets folder of `ccvl.json` (`inputs.assets`), never by a workspace path:
+assets folder of `cv.json` (`inputs.assets`), never by a workspace path:
 `asset("images/signatures/signature.png")` resolves it against the `assets`
 input that every build passes. A record field such as the onepager's
 `portrait_path = "images/avatars/portrait.png"` follows the same rule; a value
@@ -394,7 +394,7 @@ including general documents without a vacancy.
 
 ## Comparing variants
 
-`bash ./ccvl compare <item> <item> [<item>...]` renders any styles,
+`bash ./cv compare <item> <item> [<item>...]` renders any styles,
 substyles, locales, presets, application records or existing PDFs freshly
 into `.agent/cache/comparisons/` and assembles them into one review PDF, page
 by page side by side. Comparisons are review material and are never
@@ -402,23 +402,23 @@ committed. See [the comparison guide](compare.md) for items, layouts and
 examples.
 
 ```sh
-bash ./ccvl compare harvard/d-plus cluster/d-plus --only 1
-bash ./ccvl compare harvard/d-plus harvard/compact harvard/standard --layout sheet --png
+bash ./cv compare harvard/d-plus cluster/d-plus --only 1
+bash ./cv compare harvard/d-plus harvard/compact harvard/standard --layout sheet --png
 ```
 
 ## Portable consumer bundles
 
-`ccvl export-style cv en-ch --style modern --substyle standard --paper a4
+`cv export-style cv en-ch --style modern --substyle standard --paper a4
 --output style.json` exports an exact variant, including template sources,
 the engine package under `packages`, contracts, fonts and license notices. A bundle contains no profile, application,
 wording records or rendered showcase output. Styles with embedded candidate
 `source_files` must move those facts into explicit inputs before export.
 
-`ccvl render-style --bundle style.json --application application.toml --profile
+`cv render-style --bundle style.json --application application.toml --profile
 profile.toml --output document.pdf` renders outside a CCVL filesystem workspace.
 The application must contain resolved wording and select the same variant.
 
-The `ccvl` engine crate lives in its own repository (`corbet-fsl/ccvl`). Its `render` feature provides the
+The `cv` engine crate lives in its own repository (`corbet-fsl/ccvl`). Its `render` feature provides the
 same portable renderer to native consumers. The bundle owns field structure;
 `StyleDocument::editable_fields`, `field_value` and `set_field` are shared by
 manual editors and chat tools. Arrays and objects use complete JSON replacements.

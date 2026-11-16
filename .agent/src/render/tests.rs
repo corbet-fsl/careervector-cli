@@ -143,7 +143,7 @@ fn named_opportunity_workspace() -> (tempfile::TempDir, Workspace) {
         fs::write(path, content).unwrap();
     };
     write(
-        "ccvl.json",
+        "cv.json",
         &serde_json::json!({
             "format": "ccvl-workspace", "schema_version": 9,
             "documents": {
@@ -402,7 +402,7 @@ fn resolved_copy_carries_provenance_and_record_defaults() {
         "lead",
     );
     assert!(text.starts_with(
-        "// Resolved customization copy emitted by `ccvl build-opportunity acme lead`."
+        "// Resolved customization copy emitted by `cv build-opportunity acme lead`."
     ));
     assert!(text.contains("Template: outputs/cvl/cv/ledger/primary/en/ch/typst/cv.typ"));
     assert!(text.contains("application: /opportunities/acme/lead/application.toml"));

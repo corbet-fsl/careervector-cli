@@ -196,11 +196,11 @@ pub const APPLICATION_DOCUMENTS: [&str; 2] = ["cv", "cl"];
 /// names its root in `workspace_groups.outputs`, so each id is returned as
 /// that compiled layout key.
 pub fn documents(workspace: &Workspace) -> Result<Vec<&'static str>> {
-    let manifest = workspace.read_json("ccvl.json")?;
+    let manifest = workspace.read_json("cv.json")?;
     let declared = manifest
         .get("documents")
         .and_then(Value::as_object)
-        .context("ccvl.json has no documents table")?;
+        .context("cv.json has no documents table")?;
     let mut documents = declared
         .keys()
         .map(|name| {
@@ -210,7 +210,7 @@ pub fn documents(workspace: &Workspace) -> Result<Vec<&'static str>> {
                 .map(|(key, _)| *key)
                 .with_context(|| {
                     format!(
-                        "ccvl.json: document {name:?} has no workspace_groups.outputs.{name} folder"
+                        "cv.json: document {name:?} has no workspace_groups.outputs.{name} folder"
                     )
                 })
         })
@@ -252,7 +252,7 @@ pub fn layout_root(document: &str) -> Option<&'static str> {
 }
 
 pub fn root(workspace: &Workspace, document: &str) -> Result<PathBuf> {
-    let manifest = workspace.read_json("ccvl.json")?;
+    let manifest = workspace.read_json("cv.json")?;
     let path = manifest
         .pointer(&format!("/documents/{document}/root"))
         .and_then(Value::as_str)
@@ -261,7 +261,7 @@ pub fn root(workspace: &Workspace, document: &str) -> Result<PathBuf> {
 }
 
 pub fn default_style(workspace: &Workspace, document: &str) -> Result<String> {
-    let manifest = workspace.read_json("ccvl.json")?;
+    let manifest = workspace.read_json("cv.json")?;
     let name = manifest
         .pointer(&format!("/documents/{document}/default_style"))
         .and_then(Value::as_str)
@@ -473,13 +473,13 @@ pub fn definitions(workspace: &Workspace, document: &str) -> Result<Vec<Definiti
 /// many substyles each style lists. Undesigned positions are empty slots, and
 /// empty style slots follow the designed styles by number.
 pub fn validate_slots(workspace: &Workspace, document: &str) -> Result<()> {
-    let manifest = workspace.read_json("ccvl.json")?;
+    let manifest = workspace.read_json("cv.json")?;
     let slots = manifest
         .pointer(&format!("/documents/{document}/slots"))
         .and_then(Value::as_object)
         .filter(|slots| slots.len() == 2)
         .with_context(|| {
-            format!("ccvl.json: documents.{document}.slots must declare only styles and substyles")
+            format!("cv.json: documents.{document}.slots must declare only styles and substyles")
         })?;
     let count = |name: &str| {
         slots
@@ -488,7 +488,7 @@ pub fn validate_slots(workspace: &Workspace, document: &str) -> Result<()> {
             .filter(|count| *count > 0)
             .and_then(|count| usize::try_from(count).ok())
             .with_context(|| {
-                format!("ccvl.json: documents.{document}.slots.{name} must be a positive integer")
+                format!("cv.json: documents.{document}.slots.{name} must be a positive integer")
             })
     };
     let (styles, substyles) = (count("styles")?, count("substyles")?);

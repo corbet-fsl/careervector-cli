@@ -254,7 +254,7 @@ pub fn measure(
     }
     if !failures.is_empty() && emit {
         eprintln!(
-            "Line measurement failed. Rewrite with relevant, verified signal—not filler—then run `ccvl measure` again."
+            "Line measurement failed. Rewrite with relevant, verified signal—not filler—then run `cv measure` again."
         );
     }
     Ok(failures)

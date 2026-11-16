@@ -34,7 +34,7 @@ create_stable_rustup() {
 
 mark_binary_ready() {
   local cache_root="$1"
-  create_fake "$cache_root/bin" ccvl 'test-fingerprint'
+  create_fake "$cache_root/bin" cv 'test-fingerprint'
   printf 'test-fingerprint\n' > "$cache_root/install.sha256"
 }
 
@@ -60,9 +60,9 @@ complete_output="$(
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan --from-source
 )"
 [[ "$complete_output" == *'Rust toolchain: system 1.94.0'* ]]
-[[ "$complete_output" == *'ccvl binary: ready'* ]]
+[[ "$complete_output" == *'cv binary: ready'* ]]
 [[ "$complete_output" == *'missing bootstrap commands: none'* ]]
-[[ "$complete_output" == *'No ccvl build changes required.'* ]]
+[[ "$complete_output" == *'No cv build changes required.'* ]]
 
 # A newer standalone stable compiler is reused; an old/prerelease compiler is not.
 for rust_version in 1.97.0 1.100.0 1.93.9 1.94.0-nightly invalid; do
@@ -89,7 +89,7 @@ empty_output="$(
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan --from-source
 )"
 [[ "$empty_output" == *'Rust toolchain: install stable with pinned rustup-init 1.29.1'* ]]
-[[ "$empty_output" == *'ccvl binary: install'* ]]
+[[ "$empty_output" == *'cv binary: install'* ]]
 [[ "$empty_output" == *'missing bootstrap commands: checksum compiler downloader'* ]]
 [[ "$empty_output" == *'host packages: coreutils build-essential curl'* ]]
 [[ "$empty_output" == *'No changes made.'* ]]
@@ -104,7 +104,7 @@ ready_without_toolchain_output="$(
   CCVL_BOOTSTRAP_TEST_MANAGER=apt \
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan --from-source
 )"
-[[ "$ready_without_toolchain_output" == *'ccvl binary: ready'* ]]
+[[ "$ready_without_toolchain_output" == *'cv binary: ready'* ]]
 [[ "$ready_without_toolchain_output" == *'missing bootstrap commands: none'* ]]
 [[ "$ready_without_toolchain_output" == *'host packages: none'* ]]
 
@@ -118,7 +118,7 @@ partial_output="$(
 )"
 [[ "$partial_output" == *'platform: Linux-aarch64'* ]]
 [[ "$partial_output" == *'Rust toolchain: install stable with pinned rustup-init 1.29.1'* ]]
-[[ "$partial_output" == *'ccvl binary: install'* ]]
+[[ "$partial_output" == *'cv binary: install'* ]]
 [[ "$partial_output" == *'missing bootstrap commands: none'* ]]
 
 # A known developer target is not a promise that a prebuilt release exists: the
@@ -127,7 +127,7 @@ partial_output="$(
 policy_root="$scratch/policy-root"
 mkdir -p "$policy_root/.agent"
 cp -r "$repo_root/.agent/scripts" "$policy_root/.agent/scripts"
-cp "$repo_root/Cargo.toml" "$repo_root/rust-toolchain.toml" "$repo_root/ccvl.json" "$policy_root/"
+cp "$repo_root/Cargo.toml" "$repo_root/rust-toolchain.toml" "$repo_root/cv.json" "$policy_root/"
 printf 'linux-x86_64\n' > "$policy_root/.agent/release-platforms.txt"
 for unreleased_platform in Linux-aarch64 Darwin-aarch64 Darwin-x86_64; do
   unsupported_cache="$scratch/unreleased-$unreleased_platform"
@@ -149,7 +149,7 @@ for unreleased_platform in Linux-aarch64 Darwin-aarch64 Darwin-x86_64; do
     CCVL_BOOTSTRAP_TEST_PLATFORM="$unreleased_platform" \
       bash "$policy_root/.agent/scripts/bootstrap.sh" plan
   )"
-  [[ "$ready_output" == *'ccvl binary: ready'* ]]
+  [[ "$ready_output" == *'cv binary: ready'* ]]
 done
 # With the real policy every target plans a prebuilt download.
 for released_platform in Linux-aarch64 Darwin-aarch64 Darwin-x86_64; do
@@ -159,7 +159,7 @@ for released_platform in Linux-aarch64 Darwin-aarch64 Darwin-x86_64; do
     CCVL_BOOTSTRAP_TEST_PLATFORM="$released_platform" \
       bash "$repo_root/.agent/scripts/bootstrap.sh" plan 2>&1
   )"
-  [[ "$released_output" == *'ccvl binary: install'* ]]
+  [[ "$released_output" == *'cv binary: install'* ]]
 done
 
 managed_cache="$scratch/managed-cache"
@@ -173,9 +173,9 @@ managed_output="$(
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan --from-source
 )"
 [[ "$managed_output" == *'Rust toolchain: managed 1.94.0'* ]]
-[[ "$managed_output" == *'ccvl binary: ready'* ]]
+[[ "$managed_output" == *'cv binary: ready'* ]]
 
-mv "$managed_cache/bin/ccvl" "$scratch/ccvl-away"
+mv "$managed_cache/bin/cv" "$scratch/ccvl-away"
 managed_partial_output="$(
   CCVL_BOOTSTRAP_FORCE_LOCAL=1 \
   CCVL_BOOTSTRAP_PROBE_PATH="$partial_bin" \
@@ -184,7 +184,7 @@ managed_partial_output="$(
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan --from-source
 )"
 [[ "$managed_partial_output" == *'Rust toolchain: managed 1.94.0'* ]]
-[[ "$managed_partial_output" == *'ccvl binary: install'* ]]
+[[ "$managed_partial_output" == *'cv binary: install'* ]]
 
 system_rustup_bin="$scratch/system-rustup-bin"
 for command_name in curl sha256sum cc; do
@@ -201,7 +201,7 @@ system_rustup_output="$(
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan --from-source
 )"
 [[ "$system_rustup_output" == *'Rust toolchain: system 1.94.0'* ]]
-[[ "$system_rustup_output" == *'ccvl binary: ready'* ]]
+[[ "$system_rustup_output" == *'cv binary: ready'* ]]
 
 # A versioned provisioned default works even without a stable alias.
 cat > "$system_rustup_bin/rustup" <<'EOF'
@@ -264,7 +264,7 @@ mac_complete_output="$(
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan --from-source
 )"
 [[ "$mac_complete_output" == *'Rust toolchain: managed 1.94.0'* ]]
-[[ "$mac_complete_output" == *'ccvl binary: ready'* ]]
+[[ "$mac_complete_output" == *'cv binary: ready'* ]]
 [[ "$mac_complete_output" == *'host packages: none'* ]]
 
 if CCVL_BOOTSTRAP_TEST_PLATFORM=Plan9-x86_64 \
@@ -294,14 +294,14 @@ if command -v sha256sum >/dev/null 2>&1; then
 else
   ln -s "$(command -v shasum)" "$fetch_bin/shasum"
 fi
-printf '#!/bin/sh\nprintf "test-fingerprint\\n"\n' > "$fetch_fixtures/ccvl-linux-x86_64"
-chmod 0755 "$fetch_fixtures/ccvl-linux-x86_64"
+printf '#!/bin/sh\nprintf "test-fingerprint\\n"\n' > "$fetch_fixtures/cv-linux-x86_64"
+chmod 0755 "$fetch_fixtures/cv-linux-x86_64"
 if command -v sha256sum >/dev/null 2>&1; then
-  fixture_hash="$(sha256sum "$fetch_fixtures/ccvl-linux-x86_64" | awk '{ print $1 }')"
+  fixture_hash="$(sha256sum "$fetch_fixtures/cv-linux-x86_64" | awk '{ print $1 }')"
 else
-  fixture_hash="$(shasum -a 256 "$fetch_fixtures/ccvl-linux-x86_64" | awk '{ print $1 }')"
+  fixture_hash="$(shasum -a 256 "$fetch_fixtures/cv-linux-x86_64" | awk '{ print $1 }')"
 fi
-printf '%s  %s\n' "$fixture_hash" "ccvl-linux-x86_64" > "$fetch_fixtures/ccvl-linux-x86_64.sha256"
+printf '%s  %s\n' "$fixture_hash" "cv-linux-x86_64" > "$fetch_fixtures/cv-linux-x86_64.sha256"
 cat > "$fetch_bin/curl" <<EOF
 #!/bin/sh
 out=""
@@ -317,7 +317,7 @@ EOF
 chmod 0755 "$fetch_bin/curl"
 # An explicit release base: the download cases must not depend on the checkout's
 # origin remote (CI checks a staged source tree that has none).
-export CCVL_RELEASE_BASE=https://releases.invalid/ccvl/runtime-test-fingerprint
+export CCVL_RELEASE_BASE=https://releases.invalid/cv/runtime-test-fingerprint
 fetch_plan="$(
   CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
   CCVL_BOOTSTRAP_CACHE_ROOT="$fetch_cache" \
@@ -325,14 +325,14 @@ fetch_plan="$(
   CCVL_BOOTSTRAP_TEST_MANAGER=apt \
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan
 )"
-[[ "$fetch_plan" == *'ccvl binary: install'* ]]
-[[ "$fetch_plan" == *'prebuilt binary: ccvl-linux-x86_64 (matching runtime required)'* ]]
+[[ "$fetch_plan" == *'cv binary: install'* ]]
+[[ "$fetch_plan" == *'prebuilt binary: cv-linux-x86_64 (matching runtime required)'* ]]
 CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
 CCVL_BOOTSTRAP_CACHE_ROOT="$fetch_cache" \
 CCVL_BOOTSTRAP_TEST_PLATFORM=Linux-x86_64 \
 CCVL_BOOTSTRAP_TEST_MANAGER=apt \
   bash "$repo_root/.agent/scripts/bootstrap.sh" install >/dev/null
-[[ -x "$fetch_cache/bin/ccvl" ]]
+[[ -x "$fetch_cache/bin/cv" ]]
 
 fetch_ready="$(
   CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
@@ -341,7 +341,7 @@ fetch_ready="$(
   CCVL_BOOTSTRAP_TEST_MANAGER=apt \
     bash "$repo_root/.agent/scripts/bootstrap.sh" plan
 )"
-[[ "$fetch_ready" == *'ccvl binary: ready'* ]]
+[[ "$fetch_ready" == *'cv binary: ready'* ]]
 
 # A checksum-valid binary from another runtime must not be installed, even
 # when an old cache stamp claims it belongs to this source tree.
@@ -353,10 +353,10 @@ if CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
   printf 'Stale prebuilt runtime must fail.\n' >&2
   exit 1
 fi
-[[ ! -e "$scratch/stale-cache/bin/ccvl" ]]
+[[ ! -e "$scratch/stale-cache/bin/cv" ]]
 grep -Fq 'Downloaded binary does not match' "$scratch/stale-log"
 export CCVL_BOOTSTRAP_TEST_FINGERPRINT=test-fingerprint
-printf 'incorrect-checksum  ccvl-linux-x86_64\n' > "$fetch_fixtures/ccvl-linux-x86_64.sha256"
+printf 'incorrect-checksum  cv-linux-x86_64\n' > "$fetch_fixtures/cv-linux-x86_64.sha256"
 if CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
   CCVL_BOOTSTRAP_CACHE_ROOT="$scratch/corrupt-cache" \
   CCVL_BOOTSTRAP_TEST_PLATFORM=Linux-x86_64 \
@@ -364,7 +364,7 @@ if CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
   printf 'Corrupt prebuilt runtime must fail.\n' >&2
   exit 1
 fi
-[[ ! -e "$scratch/corrupt-cache/bin/ccvl" ]]
+[[ ! -e "$scratch/corrupt-cache/bin/cv" ]]
 grep -Fq 'Checksum mismatch' "$scratch/corrupt-log"
 
 # Without an explicit base, the runtime is an asset of the release named by the version
@@ -374,7 +374,7 @@ unset CCVL_RELEASE_BASE
 origin_root="$scratch/origin-root"
 mkdir -p "$origin_root/.agent"
 cp -r "$repo_root/.agent/scripts" "$origin_root/.agent/scripts"
-cp "$repo_root/rust-toolchain.toml" "$repo_root/ccvl.json" "$origin_root/"
+cp "$repo_root/rust-toolchain.toml" "$repo_root/cv.json" "$origin_root/"
 cp "$repo_root/.agent/release-platforms.txt" "$origin_root/.agent/"
 printf '[workspace.dependencies]\nversion = "9"\n\n[package]\nname = "ccvl"\nversion = "0.7.3"\nrust-version = "1.94"\n\n[dependencies]\nversion = "8"\n' > "$origin_root/Cargo.toml"
 git -C "$origin_root" init --quiet
@@ -394,7 +394,7 @@ if CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
   printf 'An unreachable release must fail.\n' >&2
   exit 1
 fi
-grep -Fxq 'https://forge.example.invalid/corbet-fsl/careervector-cli/releases/download/v0.7.3/ccvl-linux-x86_64' "$url_log"
+grep -Fxq 'https://forge.example.invalid/corbet-fsl/careervector-cli/releases/download/v0.7.3/cv-linux-x86_64' "$url_log"
 grep -Fq 'Only a released version has one' "$scratch/origin-log"
 
 printf 'POSIX bootstrap handles Linux and macOS empty, partial, complete, unsupported, and manager-less states.\n'

@@ -85,7 +85,7 @@ fn independent_workspace() -> (tempfile::TempDir, Workspace) {
             "cl": {"root": "outputs/cvl/cl", "default_style": "postcard", "slots": {"styles": 1, "substyles": 1}}
         }
     });
-    write(root, "ccvl.json", &format!("{manifest}\n"));
+    write(root, "cv.json", &format!("{manifest}\n"));
     write(
         root,
         "inputs/profile.toml",
@@ -312,9 +312,9 @@ fn new_opportunities_take_page_and_content_defaults_from_the_selected_styles() {
 fn full_workspace_check_accepts_independent_styles() {
     let (_temporary, workspace) = independent_workspace();
     let original = Workspace::at(crate::test_support::repository()).unwrap();
-    let mut manifest = original.read_json("ccvl.json").unwrap();
-    manifest["documents"] = workspace.read_json("ccvl.json").unwrap()["documents"].clone();
-    write(workspace.root(), "ccvl.json", &format!("{manifest}\n"));
+    let mut manifest = original.read_json("cv.json").unwrap();
+    manifest["documents"] = workspace.read_json("cv.json").unwrap()["documents"].clone();
+    write(workspace.root(), "cv.json", &format!("{manifest}\n"));
     for relative in [
         ".agent/scaffolds/interview/profile.toml",
         ".agent/scaffolds/interview/stations.toml",
@@ -1050,13 +1050,13 @@ fn empty_style_slots_have_an_exact_shape_and_cannot_be_selected() {
         "outputs/cvl/cv/slot-2/style.toml",
         EMPTY_STYLE,
     );
-    let manifest = fs::read_to_string(workspace.path("ccvl.json"))
+    let manifest = fs::read_to_string(workspace.path("cv.json"))
         .unwrap()
         .replace(
             "\"default_style\":\"orbit\"",
             "\"default_style\":\"slot-2\"",
         );
-    write(workspace.root(), "ccvl.json", &manifest);
+    write(workspace.root(), "cv.json", &manifest);
     let error = format!("{:#}", selection(&workspace, "cv", None, None).unwrap_err());
     assert!(error.contains("is an empty style slot"), "{error}");
 }
@@ -1066,10 +1066,10 @@ fn manifest_slots_fix_the_style_and_substyle_counts() {
     let (_temporary, workspace) = independent_workspace();
     validate_slots(&workspace, "cv").unwrap();
     validate_slots(&workspace, "cl").unwrap();
-    let mut manifest = workspace.read_json("ccvl.json").unwrap();
+    let mut manifest = workspace.read_json("cv.json").unwrap();
     let mut configure = |styles: u64, substyles: u64| {
         manifest["documents"]["cv"]["slots"] = json!({"styles": styles, "substyles": substyles});
-        write(workspace.root(), "ccvl.json", &format!("{manifest}\n"));
+        write(workspace.root(), "cv.json", &format!("{manifest}\n"));
     };
     configure(2, 2);
     orbit_substyles(
@@ -1096,12 +1096,12 @@ fn manifest_slots_fix_the_style_and_substyle_counts() {
     );
     let error = validate_slots(&workspace, "cv").unwrap_err().to_string();
     assert!(error.contains("numbered slot-2 to slot-2"), "{error}");
-    let mut manifest = workspace.read_json("ccvl.json").unwrap();
+    let mut manifest = workspace.read_json("cv.json").unwrap();
     manifest["documents"]["cv"]
         .as_object_mut()
         .unwrap()
         .remove("slots");
-    write(workspace.root(), "ccvl.json", &format!("{manifest}\n"));
+    write(workspace.root(), "cv.json", &format!("{manifest}\n"));
     assert!(validate_slots(&workspace, "cv").is_err());
 
     let fixture = crate::test_support::fixture_view();
@@ -1197,9 +1197,9 @@ fn documents_come_from_the_manifest_with_application_documents_first() {
 #[test]
 fn a_document_needs_its_own_outputs_folder() {
     let (_directory, workspace) = crate::test_support::fixture_workspace();
-    let mut manifest = workspace.read_json("ccvl.json").unwrap();
+    let mut manifest = workspace.read_json("cv.json").unwrap();
     manifest["documents"]["resume"] = json!({"root": "outputs/resume", "default_style": "x"});
-    fs::write(workspace.path("ccvl.json"), manifest.to_string()).unwrap();
+    fs::write(workspace.path("cv.json"), manifest.to_string()).unwrap();
     let error = documents(&workspace).unwrap_err().to_string();
     assert!(
         error.contains("document \"resume\" has no workspace_groups.outputs.resume folder"),
