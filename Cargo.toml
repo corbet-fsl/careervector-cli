@@ -30,7 +30,7 @@ path = ".agent/tests/private_check.rs"
 
 [dependencies]
 anyhow = "1.0"
-ccvl-engine = { package = "ccvl", git = "https://git.corbet.ch/corbet-fsl/ccvl.git", branch = "main", features = ["render"] }
+ccvl-engine = { package = "ccvl", git = "https://git.corbet.ch/corbet-fsl/careervector-cli.git", branch = "engine", features = ["render"] }
 cletter = "0.4.3"
 clap = { version = "4.5", features = ["derive"] }
 flate2 = "1.1"

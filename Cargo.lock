@@ -341,7 +341,7 @@ dependencies = [
 [[package]]
 name = "ccvl"
 version = "0.1.0"
-source = "git+https://git.corbet.ch/corbet-fsl/ccvl.git?branch=main#a8ce02d560c708056647b519fc6b99eae45728d6"
+source = "git+https://git.corbet.ch/corbet-fsl/careervector-cli.git?branch=engine#a8ce02d560c708056647b519fc6b99eae45728d6"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
