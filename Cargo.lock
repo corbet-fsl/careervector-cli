@@ -358,7 +358,8 @@ dependencies = [
 [[package]]
 name = "cdate"
 version = "0.3.3"
-source = "git+https://git.corbet.ch/corbet-libre/cdate.git?rev=2dff4ec4ac5a915ec8bcf2bcb0e3c31ad50248de#2dff4ec4ac5a915ec8bcf2bcb0e3c31ad50248de"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09b5c1c1a29960434e55f3c26c84a92f8af080bf77ad542d27f1aea34c9ab307"
 dependencies = [
  "serde",
  "serde_json",
@@ -442,7 +443,8 @@ dependencies = [
 [[package]]
 name = "cink"
 version = "0.2.2"
-source = "git+https://git.corbet.ch/corbet-libre/cink.git?rev=c9497016f27150aface01c0a4b32aa18d15f87ab#c9497016f27150aface01c0a4b32aa18d15f87ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4a9bb6aa6d57b5ea27903845475c811c6dc4411eb7f7b29fa83986a1eae8675"
 dependencies = [
  "base64 0.22.1",
  "serde",
@@ -512,8 +514,9 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
 name = "cletter"
-version = "0.4.2"
-source = "git+https://git.corbet.ch/corbet-libre/cletter.git?rev=940d6f13b385ed48d49f0c53ccb7d3a79bc6e855#940d6f13b385ed48d49f0c53ccb7d3a79bc6e855"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ba3d6afb327e3519485aaa341809a7464b6376d1f8d9dc25268f7c71e30b263"
 dependencies = [
  "cdate",
  "cink",
@@ -525,7 +528,8 @@ dependencies = [
 [[package]]
 name = "cnice"
 version = "0.1.3"
-source = "git+https://git.corbet.ch/corbet-libre/cnice.git?rev=decad9624261756fba749235ab418ba4c543740a#decad9624261756fba749235ab418ba4c543740a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1df2b74be57665828aeef4812d2446541150c61a9c3c2fee3b279e817c44c1ff"
 dependencies = [
  "serde",
  "serde_json",
@@ -756,8 +760,9 @@ dependencies = [
 
 [[package]]
 name = "ctypst"
-version = "0.3.3"
-source = "git+https://git.corbet.ch/corbet-fsl/ctypst.git?rev=e0f166f2e8f25159be08d11fc3cefd429e6528cd#e0f166f2e8f25159be08d11fc3cefd429e6528cd"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "884715c97b6ea7ceb29ef6b8885355854a1212c002cfc2f71412facb80048224"
 dependencies = [
  "serde",
  "serde_json",
