@@ -183,7 +183,7 @@ pub(crate) fn atom(value: &str, label: &str) -> Result<()> {
     Ok(())
 }
 
-pub use ccvl_core::normalize_locale;
+pub use ccvl_engine::normalize_locale;
 
 /// The application documents. A CV and a cover letter share one record per
 /// opportunity and keep their page presets, measured contracts and opportunity

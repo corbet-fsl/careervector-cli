@@ -18,7 +18,7 @@ use crate::archive::{
     unsafe_member_path,
 };
 
-const REPOSITORY: &str = "corbet-fsl/ccvl";
+const REPOSITORY: &str = "corbet-fsl/careervector-cli";
 
 /// What the release holds for one platform.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -445,7 +445,7 @@ fn git(root: &Path, args: &[&str]) -> Result<String> {
 fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
     let repository = env.nonempty("GITHUB_REPOSITORY").unwrap_or_default();
     if repository != REPOSITORY {
-        return fail("Release work requires the public corbet-fsl/ccvl repository.");
+        return fail("Release work requires the public corbet-fsl/careervector-cli repository.");
     }
     let commit = env
         .first_nonempty(&["CI_COMMIT_SHA", "GITHUB_SHA"])
@@ -532,7 +532,6 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
     }
     let required = [
         "Cargo.toml",
-        ".agent/core/Cargo.toml",
         "Cargo.lock",
         "rust-toolchain.toml",
         ".agent/build.rs",
@@ -551,7 +550,7 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
         files
             .keys()
             .filter(|path| {
-                ((path.starts_with(".agent/src/") || path.starts_with(".agent/core/src/"))
+                (path.starts_with(".agent/src/")
                     && Path::new(path.as_str())
                         .extension()
                         .is_some_and(|extension| extension == "rs"))

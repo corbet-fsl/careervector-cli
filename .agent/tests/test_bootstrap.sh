@@ -378,7 +378,7 @@ cp "$repo_root/rust-toolchain.toml" "$repo_root/ccvl.json" "$origin_root/"
 cp "$repo_root/.agent/release-platforms.txt" "$origin_root/.agent/"
 printf '[workspace.dependencies]\nversion = "9"\n\n[package]\nname = "ccvl"\nversion = "0.7.3"\nrust-version = "1.94"\n\n[dependencies]\nversion = "8"\n' > "$origin_root/Cargo.toml"
 git -C "$origin_root" init --quiet
-git -C "$origin_root" remote add origin https://forge.example.invalid/corbet-fsl/ccvl.git
+git -C "$origin_root" remote add origin https://forge.example.invalid/corbet-fsl/careervector-cli.git
 url_log="$scratch/curl-urls"
 cat > "$fetch_bin/curl" <<EOF
 #!/bin/sh
@@ -394,7 +394,7 @@ if CCVL_BOOTSTRAP_PROBE_PATH="$fetch_bin" \
   printf 'An unreachable release must fail.\n' >&2
   exit 1
 fi
-grep -Fxq 'https://forge.example.invalid/corbet-fsl/ccvl/releases/download/v0.7.3/ccvl-linux-x86_64' "$url_log"
+grep -Fxq 'https://forge.example.invalid/corbet-fsl/careervector-cli/releases/download/v0.7.3/ccvl-linux-x86_64' "$url_log"
 grep -Fq 'Only a released version has one' "$scratch/origin-log"
 
 printf 'POSIX bootstrap handles Linux and macOS empty, partial, complete, unsupported, and manager-less states.\n'

@@ -11,7 +11,7 @@ static INSTANCE_ID: LazyLock<BytesRegex> = LazyLock::new(|| {
         .expect("the rendition identifier pattern is valid")
 });
 
-pub use ccvl_core::pdf::lowercase_locales;
+pub use ccvl_engine::pdf::lowercase_locales;
 
 pub struct VerifiedPdf {
     document: Document,

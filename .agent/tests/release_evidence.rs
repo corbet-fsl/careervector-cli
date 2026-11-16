@@ -110,14 +110,6 @@ impl Release {
             ("ccvl.json".into(), b"{}\n".to_vec()),
             (".agent/src/main.rs".into(), b"fn main() {}\n".to_vec()),
             (
-                ".agent/core/Cargo.toml".into(),
-                b"[package]\nname=\"ccvl-core\"\n".to_vec(),
-            ),
-            (
-                ".agent/core/src/lib.rs".into(),
-                b"pub fn fixture() {}\n".to_vec(),
-            ),
-            (
                 ".agent/release-platforms.txt".into(),
                 fs::read(repository().join(".agent/release-platforms.txt")).unwrap(),
             ),
@@ -158,7 +150,10 @@ impl Release {
         .unwrap();
         let env = vec![
             ("FORGEJO_ACTIONS".to_owned(), "true".to_owned()),
-            ("GITHUB_REPOSITORY".to_owned(), "corbet-fsl/ccvl".to_owned()),
+            (
+                "GITHUB_REPOSITORY".to_owned(),
+                "corbet-fsl/careervector-cli".to_owned(),
+            ),
             ("CI_COMMIT_SHA".to_owned(), COMMIT.to_owned()),
             ("GITHUB_RUN_ID".to_owned(), "123".to_owned()),
             ("SOURCE_ARCHIVE".to_owned(), archive.display().to_string()),

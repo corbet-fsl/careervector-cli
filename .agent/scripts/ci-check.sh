@@ -39,10 +39,6 @@ for check in "$@"; do
       "${CCVL_CARGO_COMMAND[@]}" clippy --locked --workspace --all-targets --all-features -- -D warnings
       "${CCVL_CARGO_COMMAND[@]}" test --locked --workspace --all-features
       ;;
-    core-package)
-      ccvl_select_rust_toolchain
-      "${CCVL_CARGO_COMMAND[@]}" package --locked -p ccvl-core
-      ;;
     lint)
       # shellcheck source=.agent/scripts/existing-tool-path.sh
       source .agent/scripts/existing-tool-path.sh

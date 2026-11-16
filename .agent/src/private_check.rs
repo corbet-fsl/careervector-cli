@@ -20,7 +20,7 @@ use serde_json::{Value, json};
 
 use crate::archive::{self, Env, Kind, dumps, lfs_pointer, sha256_hex, unsafe_member_path};
 
-const PUBLIC_REPO: &str = "corbet-fsl/ccvl";
+const PUBLIC_REPO: &str = "corbet-fsl/careervector-cli";
 const ASSET: &str = "ccvl-linux-x86_64";
 /// The upstream workflow whose successful run anchors the checks.
 const UPSTREAM_CI: &str = "ci.yml";

@@ -667,7 +667,7 @@ fn require_portable_copies(
         crate::content::read_record(workspace, leaf.content())?,
         workspace.read_toml_value(crate::layout::INPUTS_PROFILE)?,
     )?;
-    let renderer = ccvl_core::render::StyleRenderer::new(&project.bundle)?;
+    let renderer = ccvl_engine::render::StyleRenderer::new(&project.bundle)?;
     let portable = renderer
         .compile(&project)
         .with_context(|| format!("the portable bundle of {} does not compile", spec.name))?;

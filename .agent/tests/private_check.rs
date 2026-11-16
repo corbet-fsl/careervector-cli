@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 use tempfile::TempDir;
 
 const BIN: &str = env!("CARGO_BIN_EXE_ccvl");
-const UPSTREAM_URL: &str = "https://forge.example.invalid/corbet-fsl/ccvl.git";
+const UPSTREAM_URL: &str = "https://forge.example.invalid/corbet-fsl/careervector-cli.git";
 const TOKEN: &str = "fixture-job-token";
 /// Publication credentials: each one alone must stop the stage.
 const CREDENTIALS: [&str; 7] = [
@@ -67,7 +67,7 @@ if [[ $last == "https://forge.example.invalid/api/v1/repos/fixture/private-downs
   printf '{"private": %s, "full_name": "fixture/private-downstream"}' "$private" > "$output"
   exit 0
 fi
-if [[ $last == "https://forge.example.invalid/api/v1/repos/corbet-fsl/ccvl/actions/runs?head_sha="*"&workflow_id=ci.yml&status=success&limit=1" ]]; then
+if [[ $last == "https://forge.example.invalid/api/v1/repos/corbet-fsl/careervector-cli/actions/runs?head_sha="*"&workflow_id=ci.yml&status=success&limit=1" ]]; then
   sha="${last#*head_sha=}"; sha="${sha%%&*}"
   printf 'ci:%s\n' "$sha" >> "$TEST_TRACE"
   [[ -z ${TEST_CI_UNAVAILABLE:-} ]] || exit 22
@@ -173,13 +173,11 @@ impl Downstream {
         downstream.git(&["init", "--quiet", "--template=", "--initial-branch=main"]);
         for name in [
             "Cargo.toml",
-            ".agent/core/Cargo.toml",
             "Cargo.lock",
             "rust-toolchain.toml",
             ".agent/build.rs",
             "ccvl.json",
             ".agent/src/main.rs",
-            ".agent/core/src/lib.rs",
             ".agent/typst/lib.typ",
         ] {
             downstream.write(name, "runtime fixture\n");
@@ -418,7 +416,7 @@ fn public_hosted_manual_and_nonprivate_execution_are_refused_before_the_upstream
     for environment in [
         ("FORGEJO_ACTIONS", ""),
         ("RUNNER_ENVIRONMENT", "github-hosted"),
-        ("GITHUB_REPOSITORY", "corbet-fsl/ccvl"),
+        ("GITHUB_REPOSITORY", "corbet-fsl/careervector-cli"),
         ("GITHUB_REPOSITORY", ""),
         ("GITHUB_EVENT_NAME", "push"),
         ("GITHUB_EVENT_NAME", "pull_request"),

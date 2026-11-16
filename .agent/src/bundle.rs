@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result, ensure};
-use ccvl_core::{StyleBundle, StyleDocument};
+use ccvl_engine::{StyleBundle, StyleDocument};
 use serde_json::json;
 
 use crate::{Workspace, styles};
@@ -77,7 +77,7 @@ pub fn export(
         .to_string_lossy()
         .replace('\\', "/");
     let mut bundle = StyleBundle {
-        schema_version: ccvl_core::style::BUNDLE_SCHEMA,
+        schema_version: ccvl_engine::style::BUNDLE_SCHEMA,
         engine_api: 1,
         id: format!(
             "{document}/{}/{}/{}/{pages}/{}",
@@ -144,7 +144,7 @@ fn add(
         .relative(&path)?
         .to_string_lossy()
         .replace('\\', "/");
-    ccvl_core::style::validate_path(&relative)?;
+    ccvl_engine::style::validate_path(&relative)?;
     files.insert(relative.clone(), fs::read(path)?);
     Ok(relative)
 }
@@ -155,7 +155,7 @@ pub fn render(bundle: &Path, record: &Path, profile: &Path, output: &Path) -> Re
         crate::workspace::read_toml_value(record)?,
         crate::workspace::read_toml_value(profile)?,
     )?;
-    let renderer = ccvl_core::render::StyleRenderer::new(&project.bundle)?;
+    let renderer = ccvl_engine::render::StyleRenderer::new(&project.bundle)?;
     let document = renderer.compile(&project)?;
     if let Some(parent) = output
         .parent()

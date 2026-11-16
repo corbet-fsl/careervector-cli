@@ -35,7 +35,7 @@ stage 'The clone'
 [[ $(uname -s) == Darwin && $(uname -m) == x86_64 ]] || refuse 'The macOS leg runs in the macOS build clone (Darwin, x86_64).'
 [[ $(sysctl -in sysctl.proc_translated 2>/dev/null || true) != 1 ]] || refuse 'A translated macOS process can not provide native evidence.'
 [[ -z ${GH_TOKEN:-} ]] || refuse 'Publication credentials must not reach the macOS leg.'
-[[ ${FORGEJO_ACTIONS:-} == true && ${GITHUB_REPOSITORY:-} == corbet-fsl/ccvl && ${GITHUB_REF_NAME:-} == main ]] \
+[[ ${FORGEJO_ACTIONS:-} == true && ${GITHUB_REPOSITORY:-} == corbet-fsl/careervector-cli && ${GITHUB_REF_NAME:-} == main ]] \
   || refuse 'The macOS leg requires a Forgejo run on public ccvl main.'
 for tool in jq curl git tar cmp shasum rustup cargo clang lipo; do
   command -v "$tool" >/dev/null || refuse "Missing tool: $tool (the macOS clone provides it)."

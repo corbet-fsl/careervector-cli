@@ -1,5 +1,5 @@
 use super::*;
-use ccvl_core::render::StyleRenderer;
+use ccvl_engine::render::StyleRenderer;
 
 /// Bundles export from the synthetic fixture; the real exportable styles'
 /// portable parity is a `check` gate.

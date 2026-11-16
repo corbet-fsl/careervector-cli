@@ -7,7 +7,7 @@ cd "$repo_root"
 source .agent/scripts/release-evidence.sh
 action="${1:?Usage: release-ci.sh rust|lint|native|cross|linux-deep|archive|check|windows}"
 if [[ ${FORGEJO_ACTIONS:-} == true ]]; then
-  [[ ${GITHUB_REPOSITORY:-} == corbet-fsl/ccvl && ${GITHUB_REF_NAME:-} == main ]] || {
+  [[ ${GITHUB_REPOSITORY:-} == corbet-fsl/careervector-cli && ${GITHUB_REF_NAME:-} == main ]] || {
     echo 'Forgejo release stages require public ccvl main.' >&2; exit 2;
   }
   [[ -n ${CARGO_TARGET_DIR:-} && ${CCID_TARGET_LOCK_HELD:-} == "$CARGO_TARGET_DIR" ]] || {

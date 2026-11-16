@@ -3,7 +3,7 @@
 pub mod application;
 pub mod archive;
 pub mod bundle;
-pub use ccvl_core as core;
+pub use ccvl_engine as core;
 pub mod check;
 pub mod cli;
 pub mod compare;

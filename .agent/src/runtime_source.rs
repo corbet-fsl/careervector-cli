@@ -10,12 +10,10 @@ pub const ENGINE_PACKAGE_DIR: &str = ".agent/typst";
 pub fn inputs(root: &Path) -> io::Result<Vec<String>> {
     let mut sources = Vec::new();
     collect(root, &root.join(".agent/src"), &mut sources)?;
-    collect(root, &root.join(".agent/core/src"), &mut sources)?;
     sources.extend(engine_package(root)?);
     sources.sort();
     let mut paths = [
         "Cargo.toml",
-        ".agent/core/Cargo.toml",
         "Cargo.lock",
         "rust-toolchain.toml",
         ".agent/build.rs",

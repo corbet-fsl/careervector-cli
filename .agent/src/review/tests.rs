@@ -22,12 +22,10 @@ impl Fixture {
         let directory = tempdir().unwrap();
         let root = directory.path();
         fs::create_dir_all(root.join(".agent/src")).unwrap();
-        fs::create_dir_all(root.join(".agent/core/src")).unwrap();
         fs::create_dir_all(root.join(".agent/typst")).unwrap();
         for path in [
             "ccvl.json",
             "Cargo.toml",
-            ".agent/core/Cargo.toml",
             "Cargo.lock",
             "rust-toolchain.toml",
             ".agent/build.rs",

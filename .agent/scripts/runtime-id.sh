@@ -28,16 +28,16 @@ source_fingerprint() (
     printf '%s\n' "${CCVL_BOOTSTRAP_TEST_FINGERPRINT:-test-fingerprint}"
     return 0
   fi
-  [[ -d "$repo_root/.agent/src" && -d "$repo_root/.agent/core/src" && -d "$repo_root/.agent/typst" ]] || return 1
+  [[ -d "$repo_root/.agent/src" && -d "$repo_root/.agent/typst" ]] || return 1
   local checksum
   {
-    for relative in Cargo.toml .agent/core/Cargo.toml Cargo.lock rust-toolchain.toml .agent/build.rs ccvl.json; do
+    for relative in Cargo.toml Cargo.lock rust-toolchain.toml .agent/build.rs ccvl.json; do
       checksum="$(hash_file "$repo_root/$relative")" || return 1
       printf '%s %s\n' "$relative" "$checksum"
     done
     # Rust sources and the embedded engine Typst package, in byte order.
     {
-      find "$repo_root/.agent/src" "$repo_root/.agent/core/src" -type f -name '*.rs' -print
+      find "$repo_root/.agent/src" -type f -name '*.rs' -print
       find "$repo_root/.agent/typst" -maxdepth 1 -type f \( -name '*.typ' -o -name '*.toml' -o -name '*.json' \) -print
     } | LC_ALL=C sort | while IFS= read -r path; do
       relative="${path#"$repo_root/"}"

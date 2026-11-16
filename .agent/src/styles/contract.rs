@@ -1,1 +1,1 @@
-pub(super) use ccvl_core::contract::validate_contract;
+pub(super) use ccvl_engine::contract::validate_contract;

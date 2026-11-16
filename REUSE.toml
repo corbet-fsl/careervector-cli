@@ -6,7 +6,6 @@ path = [
   ".ci/ccid.toml",
   ".agent/AGENT.md",
   ".agent/build.rs",
-  ".agent/core/**",
   ".agent/kanban.toml",
   ".agent/release-platforms.txt",
   ".agent/scripts/**",

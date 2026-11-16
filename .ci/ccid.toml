@@ -64,14 +64,6 @@ kind = "commands"
 cache = false
 commands = [["bash", ".agent/scripts/release-seal.sh"]]
 
-[checks.core-package]
-kind = "commands"
-commands = [["bash", ".agent/scripts/ci-check.sh", "core-package"]]
-
-[checks.core-release]
-kind = "commands"
-commands = [["bash", ".agent/scripts/ci-check.sh", "rust", "lint", "core-package"]]
-
 # The always-run Linux CI gates (ci.yml jobs rust-native, documents, lint on
 # ubuntu-24.04) map to the rust/documents/lint selectors; [checks.styles]
 # (`bash .agent/scripts/ci-check.sh styles`) is the exact path CI's documents

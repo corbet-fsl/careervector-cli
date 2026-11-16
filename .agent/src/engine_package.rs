@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 use anyhow::Result;
-use ccvl_core::render::Packages;
+use ccvl_engine::render::Packages;
 use ctypst::EngineBuilder;
 
 mod embedded {
@@ -29,7 +29,7 @@ pub fn packages() -> &'static Packages {
 
 /// Register the engine package and the correspondence libraries.
 pub fn with_packages(builder: EngineBuilder) -> Result<EngineBuilder> {
-    ccvl_core::render::with_packages(builder, packages())
+    ccvl_engine::render::with_packages(builder, packages())
 }
 
 #[cfg(test)]
@@ -52,6 +52,6 @@ mod tests {
             let name = relative.rsplit('/').next().unwrap();
             assert_eq!(files[name], std::fs::read(root.join(&relative)).unwrap());
         }
-        assert!(ccvl_core::render::is_engine_package(SPEC));
+        assert!(ccvl_engine::render::is_engine_package(SPEC));
     }
 }

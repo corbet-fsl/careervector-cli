@@ -8,7 +8,6 @@ function Get-SourceFingerprint {
     }
     $Files = @(
         Get-Item -ErrorAction Stop -LiteralPath (Join-Path $RepoRoot "Cargo.toml")
-        Get-Item -ErrorAction Stop -LiteralPath (Join-Path $RepoRoot ".agent/core/Cargo.toml")
         Get-Item -ErrorAction Stop -LiteralPath (Join-Path $RepoRoot "Cargo.lock")
         Get-Item -ErrorAction Stop -LiteralPath (Join-Path $RepoRoot "rust-toolchain.toml")
         Get-Item -ErrorAction Stop -LiteralPath (Join-Path $RepoRoot ".agent/build.rs")
@@ -17,7 +16,7 @@ function Get-SourceFingerprint {
     # Rust sources and the embedded engine Typst package, sorted by the byte
     # order of their relative paths like runtime_source.rs.
     $Sources = @(
-        Get-ChildItem -ErrorAction Stop -LiteralPath @((Join-Path $RepoRoot ".agent\src"), (Join-Path $RepoRoot ".agent\core\src")) -Recurse -File -Filter "*.rs"
+        Get-ChildItem -ErrorAction Stop -LiteralPath @((Join-Path $RepoRoot ".agent\src")) -Recurse -File -Filter "*.rs"
         Get-ChildItem -ErrorAction Stop -LiteralPath (Join-Path $RepoRoot ".agent\typst") -File |
             Where-Object { $_.Extension -cin @(".typ", ".toml", ".json") }
     )

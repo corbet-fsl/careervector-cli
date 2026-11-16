@@ -418,7 +418,7 @@ wording records or rendered showcase output. Styles with embedded candidate
 profile.toml --output document.pdf` renders outside a CCVL filesystem workspace.
 The application must contain resolved wording and select the same variant.
 
-The `ccvl-core` crate lives in `.agent/core`. Its `render` feature provides the
+The `ccvl` engine crate lives in its own repository (`corbet-fsl/ccvl`). Its `render` feature provides the
 same portable renderer to native consumers. The bundle owns field structure;
 `StyleDocument::editable_fields`, `field_value` and `set_field` are shared by
 manual editors and chat tools. Arrays and objects use complete JSON replacements.
