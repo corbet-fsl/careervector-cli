@@ -464,11 +464,19 @@ pub fn run() -> Result<ExitCode> {
         Command::PublicCheck { artifacts, styles } => {
             let styles = crate::styles::StyleFilter::parse(&workspace, &styles)?;
             check::run_selected(&workspace, artifacts.as_deref(), &styles)?;
-            public::validate_boundary(&workspace)?;
-            println!(
-                "Public-boundary checks passed{}. Review .agent/docs/public-identifiers.md before publishing.",
-                document_scope(&styles)
-            );
+            if downstream::is_downstream(&workspace) {
+                // A private downstream publishes nothing upstream: only the public repository is guarded.
+                println!(
+                    "Checks passed{}. The public-boundary guard is skipped: this workspace is a downstream.",
+                    document_scope(&styles)
+                );
+            } else {
+                public::validate_boundary(&workspace)?;
+                println!(
+                    "Public-boundary checks passed{}. Review .agent/docs/public-identifiers.md before publishing.",
+                    document_scope(&styles)
+                );
+            }
         }
         Command::DownstreamCheck {
             policy,

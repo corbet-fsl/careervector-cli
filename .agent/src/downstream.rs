@@ -28,6 +28,16 @@ struct Upstream {
     branch: String,
 }
 
+/// File that declares a repository a private downstream of the public one.
+pub const POLICY_FILE: &str = "ccvl-downstream.json";
+
+/// True when the workspace declares itself a downstream. Nothing flows upstream from a downstream,
+/// so the public-boundary guard has nothing to protect there.
+#[must_use]
+pub fn is_downstream(workspace: &crate::workspace::Workspace) -> bool {
+    workspace.root().join(POLICY_FILE).is_file()
+}
+
 pub fn validate(
     workspace: &Workspace,
     policy_path: &Path,
@@ -211,6 +221,18 @@ fn ensure_git_success(output: &Output, operation: &str) -> Result<()> {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn only_a_workspace_with_the_policy_file_is_a_downstream() {
+        let public = crate::test_support::fixture_view();
+        assert!(!is_downstream(&public));
+        let dir = tempdir().unwrap();
+        std::fs::write(dir.path().join("cv.json"), "{}").unwrap();
+        let workspace = crate::workspace::Workspace::at(dir.path()).unwrap();
+        assert!(!is_downstream(&workspace));
+        std::fs::write(dir.path().join(POLICY_FILE), "{}").unwrap();
+        assert!(is_downstream(&workspace));
+    }
 
     const TEST_UPSTREAM: &str = "https://forge.example.invalid/ccvl/ccvl.git";
 
