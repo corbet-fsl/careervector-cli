@@ -296,6 +296,9 @@ mod tests {
 
     #[test]
     fn repository_boundary_rejects_an_upstream_owned_change() {
+        if !crate::test_support::git_or_skip() {
+            return;
+        }
         let directory = tempdir().unwrap();
         let root = directory.path();
         fs::write(root.join("cv.json"), "{}\n").unwrap();

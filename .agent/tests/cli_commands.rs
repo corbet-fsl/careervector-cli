@@ -16,7 +16,7 @@ use serde_json::{Value, json};
 
 #[path = "test_bin.rs"]
 mod test_bin;
-use test_bin::BIN;
+use test_bin::{BIN, git_or_skip};
 
 fn repository() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1426,15 +1426,6 @@ fn render_style_needs_its_bundle_file() {
 // downstream-check
 // ---------------------------------------------------------------------------
 
-/// `downstream-check` and its fixtures drive Git; a machine without it (the offline
-/// Windows clone) can not run them, and says so instead of failing.
-fn git_is_installed() -> bool {
-    Command::new("git")
-        .arg("--version")
-        .output()
-        .is_ok_and(|output| output.status.success())
-}
-
 fn git(root: &Path, args: &[&str]) {
     let output = Command::new("git")
         .args(args)
@@ -1506,8 +1497,7 @@ fn downstream_fixture(prefix: &str) -> (tempfile::TempDir, PathBuf) {
 
 #[test]
 fn downstream_check_passes_an_owned_delta() {
-    if !git_is_installed() {
-        eprintln!("skipped: git is not installed on this machine");
+    if !git_or_skip() {
         return;
     }
     let (_temp, root) = downstream_fixture("ccvl-cli-downstream-");
@@ -1531,8 +1521,7 @@ fn downstream_check_passes_an_owned_delta() {
 
 #[test]
 fn downstream_check_rejects_upstream_owned_edits() {
-    if !git_is_installed() {
-        eprintln!("skipped: git is not installed on this machine");
+    if !git_or_skip() {
         return;
     }
     let (_temp, root) = downstream_fixture("ccvl-cli-downstream-edit-");

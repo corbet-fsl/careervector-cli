@@ -196,8 +196,10 @@ pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
     let mut ancestor = target.parent();
     while let Some(directory) = ancestor {
         if directory.exists() {
-            let canonical = dunce::canonicalize(directory)?;
-            if !canonical.starts_with(dunce::canonicalize(root)?) {
+            // Both in the form the file system resolves them: a long path keeps its Windows
+            // prefix while a short root does not.
+            let canonical = fs::canonicalize(directory)?;
+            if !canonical.starts_with(fs::canonicalize(root)?) {
                 bail!(
                     "refusing {relative}: it resolves outside the workspace (nothing was changed)"
                 );
@@ -434,6 +436,9 @@ mod tests {
 
     #[test]
     fn the_embedded_set_is_the_shipped_tree_and_leaves_out_the_tool() {
+        if !crate::test_support::git_or_skip() {
+            return;
+        }
         let release = Release::embedded();
         assert!(release.files.contains_key("cv.json"));
         assert!(release.files.contains_key("inputs/profile.toml"));

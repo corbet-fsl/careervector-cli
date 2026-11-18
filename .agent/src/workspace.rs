@@ -8,7 +8,12 @@ use serde_json::Value;
 
 #[derive(Clone, Debug)]
 pub struct Workspace {
+    /// The root as users read it: no Windows `\\?\` prefix where it can be dropped.
     root: PathBuf,
+    /// The root as the file system resolves it (`std::fs::canonicalize`; on Windows the
+    /// verbatim form). Containment is decided on this form, because a path that is too long
+    /// to be written without the prefix keeps it while a short root loses it.
+    root_resolved: PathBuf,
     observed: Option<Arc<Mutex<BTreeSet<PathBuf>>>>,
 }
 
@@ -32,13 +37,15 @@ impl Workspace {
     }
 
     pub fn at(root: &Path) -> Result<Self> {
-        let root = dunce::canonicalize(root)
+        let root_resolved = fs::canonicalize(root)
             .with_context(|| format!("cannot resolve workspace {}", root.display()))?;
+        let root = dunce::simplified(&root_resolved).to_path_buf();
         if !root.join("cv.json").is_file() {
             bail!("{} is not a ccvl workspace", root.display());
         }
         Ok(Self {
             root,
+            root_resolved,
             observed: None,
         })
     }
@@ -58,6 +65,7 @@ impl Workspace {
     pub fn tracked(&self) -> Self {
         Self {
             root: self.root.clone(),
+            root_resolved: self.root_resolved.clone(),
             observed: Some(Arc::default()),
         }
     }
@@ -83,10 +91,10 @@ impl Workspace {
             let path = dunce::simplified(&self.path(path)).to_path_buf();
             let mut observed = observed.lock().expect("input observation lock poisoned");
             observed.insert(path.clone());
-            if let Ok(resolved) = dunce::canonicalize(&path)
-                && resolved.starts_with(&self.root)
+            if let Ok(resolved) = fs::canonicalize(&path)
+                && resolved.starts_with(&self.root_resolved)
             {
-                observed.insert(resolved);
+                observed.insert(dunce::simplified(&resolved).to_path_buf());
             }
         }
     }
@@ -109,19 +117,30 @@ impl Workspace {
             self.root.join(value)
         };
         self.observe_input(&candidate);
-        let resolved = dunce::canonicalize(&candidate)
+        let resolved = fs::canonicalize(&candidate)
             .with_context(|| format!("cannot resolve {}", value.display()))?;
-        if !resolved.starts_with(&self.root) {
+        if !resolved.starts_with(&self.root_resolved) {
             bail!(
                 "input must be inside the ccvl workspace: {}",
                 value.display()
             );
         }
-        Ok(resolved)
+        Ok(dunce::simplified(&resolved).to_path_buf())
+    }
+
+    /// Whether `path` is `base` or below it, both read as workspace paths in either spelling.
+    #[must_use]
+    pub fn is_under(&self, base: &Path, path: &Path) -> bool {
+        match (self.relative(base), self.relative(path)) {
+            (Ok(base), Ok(path)) => path.starts_with(base),
+            _ => path.starts_with(base),
+        }
     }
 
     pub fn relative(&self, path: &Path) -> Result<PathBuf> {
+        // Either spelling of the root: a long path keeps its Windows prefix.
         path.strip_prefix(&self.root)
+            .or_else(|_| path.strip_prefix(&self.root_resolved))
             .map(Path::to_path_buf)
             .with_context(|| format!("{} is outside the ccvl workspace", path.display()))
     }

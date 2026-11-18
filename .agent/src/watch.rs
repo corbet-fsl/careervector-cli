@@ -106,7 +106,7 @@ fn digest(workspace: &Workspace, inputs: &BTreeSet<PathBuf>) -> Vec<u8> {
             Ok(resolved) => {
                 hash.update(resolved.to_string_lossy().as_bytes());
                 hash.update([0]);
-                if !resolved.starts_with(workspace.root()) {
+                if workspace.relative(&resolved).is_err() {
                     // A changed symlink can become unsafe after a valid build.
                     // Detect it, but let the normal renderer report the error.
                     hash.update(b"outside workspace");

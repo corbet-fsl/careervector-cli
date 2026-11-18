@@ -139,6 +139,38 @@ fn a_fork_style_checkout_without_a_manifest_is_adopted_and_keeps_its_edit() {
     assert!(after["files"].get("inputs/profile.toml").is_none());
 }
 
+/// A root of 200+ characters: the deepest shipped files are over 260 characters long, where
+/// Windows keeps the `\\?\` prefix on a resolved path while the shorter root loses it. Update and
+/// a render must still see those files as inside the workspace.
+#[test]
+fn a_workspace_under_a_long_root_updates_and_renders() {
+    let dir = scratch();
+    let mut parent = dir.path().to_path_buf();
+    while parent.as_os_str().len() < 220 {
+        parent.push("long-directory-name-0123456789");
+    }
+    fs::create_dir_all(&parent).unwrap();
+    let root = init(&parent, "ws");
+    let update = cv(&root, &["update", "--apply"]);
+    assert!(update.status.success(), "{}", text(&update));
+    assert!(!text(&update).contains("outside"), "{}", text(&update));
+    let build = cv(
+        &root,
+        &[
+            "build-cv",
+            "en-ch",
+            "4",
+            "--style",
+            "harvard",
+            "--substyle",
+            "compact",
+        ],
+    );
+    assert!(build.status.success(), "{}", text(&build));
+    let check = cv(&root, &["list-styles"]);
+    assert!(check.status.success(), "{}", text(&check));
+}
+
 #[test]
 fn the_wrong_directory_is_refused_both_ways() {
     let dir = scratch();

@@ -124,9 +124,9 @@ pub(super) fn artifact_path(run: &Path, artifact: &Artifact) -> Result<PathBuf> 
             .all(|part| matches!(part, Component::Normal(_))),
         "invalid snapshot path"
     );
-    let path = dunce::canonicalize(run.join(path))?;
+    let path = std::fs::canonicalize(run.join(path))?;
     ensure!(
-        path.starts_with(dunce::canonicalize(run)?),
+        path.starts_with(std::fs::canonicalize(run)?),
         "snapshot escapes run directory"
     );
     Ok(path)

@@ -613,7 +613,7 @@ fn require_document_isolation(
         }
         let reads = inputs
             .iter()
-            .filter(|path| path.starts_with(root))
+            .filter(|path| workspace.is_under(root, path))
             .map(|path| {
                 workspace
                     .relative(path)
