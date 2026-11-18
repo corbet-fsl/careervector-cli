@@ -48,6 +48,37 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Write the complete working-example workspace into a directory, offline.
+    Init {
+        /// Target directory; created if missing, empty unless --force.
+        #[arg(default_value = ".")]
+        directory: PathBuf,
+        /// Write into a non-empty directory. Existing files are never overwritten.
+        #[arg(long)]
+        force: bool,
+        /// Run `git init` afterwards (never commits). Without a flag, asks on a terminal.
+        #[arg(long, conflicts_with = "no_git")]
+        git: bool,
+        /// Do not offer `git init`.
+        #[arg(long)]
+        no_git: bool,
+    },
+    /// Bring this workspace to the installed cv version, keeping every edit of yours.
+    ///
+    /// Files you never changed are replaced; files you changed stay and the new
+    /// version is written beside them as <name>.cv-new. Shows the plan; nothing
+    /// changes without --apply.
+    Update {
+        /// Apply the plan. Without it, only the plan is shown.
+        #[arg(long)]
+        apply: bool,
+        /// Show the plan without applying (the default).
+        #[arg(long, conflicts_with = "apply")]
+        dry_run: bool,
+    },
+    /// Print the digest of the file set embedded for `cv init`.
+    #[command(hide = true)]
+    FilesetId,
     /// Export a neutral style variant for native or web consumers.
     ExportStyle {
         #[arg(value_parser = ["cv", "cl"])]
@@ -348,6 +379,46 @@ pub fn run() -> Result<ExitCode> {
         println!("{}", crate::runtime::ID);
         return Ok(ExitCode::SUCCESS);
     }
+    match &args.command {
+        Command::FilesetId => {
+            println!("{}", crate::init::FILESET_ID);
+            return Ok(ExitCode::SUCCESS);
+        }
+        Command::Init {
+            directory,
+            force,
+            git,
+            no_git,
+        } => {
+            let release = crate::init::Release::embedded();
+            let choice = if *git {
+                crate::init::Git::Yes
+            } else if *no_git {
+                crate::init::Git::No
+            } else {
+                crate::init::Git::Ask
+            };
+            let target = directory;
+            let report = crate::init::init(target, &release, *force, choice)?;
+            crate::init::print_report(&report, &release);
+            return Ok(ExitCode::SUCCESS);
+        }
+        Command::Update { apply, .. } => {
+            let start = match &args.root {
+                Some(root) => root.clone(),
+                None => std::env::current_dir()?,
+            };
+            let root = crate::update::find_workspace(&start)?;
+            let release = crate::init::Release::embedded();
+            let plan = crate::update::plan(&root, &release, crate::update::MIGRATIONS)?;
+            if *apply {
+                crate::update::apply(&root, &release, crate::update::MIGRATIONS, &plan)?;
+            }
+            crate::update::print_plan(&plan, *apply);
+            return Ok(ExitCode::SUCCESS);
+        }
+        _ => {}
+    }
     // Maintainer routes run before any workspace exists for the target.
     if let Command::ReleaseEvidence { command } = &args.command {
         return Ok(crate::release_evidence::run(args.root.as_deref(), command));
@@ -366,7 +437,11 @@ pub fn run() -> Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
     let workspace = Workspace::discover(args.root.as_deref())?;
-    crate::runtime::verify(workspace.root())?;
+    // A source checkout (a fork) must match its binary; a workspace made by
+    // `cv init` carries no tool sources, and the installed binary is the tool.
+    if workspace.path(".agent/src").is_dir() {
+        crate::runtime::verify(workspace.root())?;
+    }
     let mut exit_code = ExitCode::SUCCESS;
     match args.command {
         Command::ExportStyle {
@@ -397,7 +472,12 @@ pub fn run() -> Result<ExitCode> {
                 serde_json::to_string_pretty(&crate::review::run(&workspace, command)?)?
             );
         }
-        Command::RuntimeId | Command::ReleaseEvidence { .. } | Command::PrivateCheck => {
+        Command::RuntimeId
+        | Command::Init { .. }
+        | Command::Update { .. }
+        | Command::FilesetId
+        | Command::ReleaseEvidence { .. }
+        | Command::PrivateCheck => {
             unreachable!("handled before workspace discovery")
         }
         Command::Setup => {

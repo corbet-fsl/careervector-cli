@@ -61,22 +61,66 @@ Included are:
 
 ## Quick start
 
-On Linux x86_64, no Git or Typst experience is required. Download and extract the Linux bundle from this repository's latest release, or
-clone the repository if you already use Git. Open the folder in a
-filesystem-capable coding agent and ask it to set up ccvl using `AGENTS.md`.
-The complete novice and terminal workflows are in [Getting
-started](.agent/docs/getting-started.md).
+Install the `cv` binary for your platform (Linux, macOS or Windows) from this
+repository's latest release, then create your own copy of the complete working
+example, the real bilingual CV included. It is written from data inside the
+binary, offline:
+
+```sh
+cv init my-cv        # writes the full example workspace and records .cv/manifest.json
+cd my-cv
+cv build             # renders the showcase CVs and letters; no other tool is needed
+cv new-opportunity example-org strategy-lead
+# Complete the new application.toml with the ccvl-apply skill, then:
+cv build-opportunity example-org strategy-lead
+```
+
+`cv init` refuses a non-empty directory (`--force` writes into one but never
+overwrites an existing file) and offers `git init` without ever committing. It is
+easier to change an existing CV than to write a first one: edit the text, keep
+what fits, delete what does not.
+
+### Updating
+
+Install a newer `cv`, then, inside your workspace:
+
+```sh
+cv update            # shows the plan; changes nothing
+cv update --apply    # applies it and prints a summary
+```
+
+`cv update` treats files the way dpkg treats configuration files. A file you
+never changed is replaced by the new version. A file you changed stays yours and
+the new version is written beside it as `<name>.cv-new`; compare, merge what you
+want, delete the `.cv-new`. New files are added, files dropped upstream are
+removed only if you never touched them, and a file you deleted stays deleted.
+Schema migrations run forward and are safe to repeat. A workspace written by a
+newer `cv` is refused, with nothing changed. The state lives in
+`.cv/manifest.json` (the cv version and a sha256 for every file `cv` wrote); keep
+it with your workspace.
+
+### Working from a fork
+
+The code is public and you can still fork it. In a checkout of this repository,
+`cv update` adopts it: files identical to the shipped ones are recorded, every
+other file is treated as yours, and the tool's own sources are never touched. The
+fork's launcher keeps working:
 
 ```sh
 git clone <ccvl repository URL> ccvl
 cd ccvl
-bash ./cv setup
+bash ./cv setup      # installs the binary matching this source into .agent/cache
 bash ./cv check
 bash ./cv build
-bash ./cv new-opportunity example-org strategy-lead
-# Complete the new application.toml with the ccvl-apply skill, then:
-bash ./cv build-opportunity example-org strategy-lead
 ```
+
+What a workspace contains: `inputs/`, `outputs/` (the sources; renders appear
+after `cv build`), `opportunities/`, `cv.json`, the agent skills, the docs, the
+licence files and the fonts. The tool's own sources, tests and CI are not part
+of it: the installed binary is the tool.
+
+The complete novice and terminal workflows are in [Getting
+started](.agent/docs/getting-started.md).
 
 Generated general documents are written to
 `outputs/cvl/cv/<style>/<substyle>/<language>/<region>/pdf/cv-{2,3,4}.pdf` and

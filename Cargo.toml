@@ -29,6 +29,10 @@ name = "private_check"
 path = ".agent/tests/private_check.rs"
 
 [[test]]
+name = "init_update"
+path = ".agent/tests/init_update.rs"
+
+[[test]]
 name = "cli_commands"
 path = ".agent/tests/cli_commands.rs"
 

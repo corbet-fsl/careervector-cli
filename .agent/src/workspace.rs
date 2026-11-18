@@ -182,7 +182,7 @@ pub fn read_toml_value(path: &Path) -> Result<Value> {
         .with_context(|| format!("unsupported TOML data in {}", path.display()))
 }
 
-fn find_root(start: &Path) -> Option<PathBuf> {
+pub fn find_root(start: &Path) -> Option<PathBuf> {
     start
         .ancestors()
         .find(|candidate| candidate.join("cv.json").is_file())

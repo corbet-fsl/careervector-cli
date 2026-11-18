@@ -379,6 +379,8 @@ pub struct Identity {
     pub source_archive_sha256: String,
     pub cargo_lock_sha256: String,
     pub runtime_id: String,
+    /// Digest of the files `cv init` embeds; see `fileset_source`.
+    pub fileset_sha256: String,
 }
 
 impl Identity {
@@ -391,6 +393,7 @@ impl Identity {
             "source_archive_sha256": self.source_archive_sha256,
             "cargo_lock_sha256": self.cargo_lock_sha256,
             "runtime_id": self.runtime_id,
+            "fileset_sha256": self.fileset_sha256,
         }) else {
             unreachable!("object literal")
         };
@@ -568,6 +571,14 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
             .concat()
             .as_bytes(),
     );
+    // The workspace `cv init` writes is embedded in the binary; the evidence
+    // pins exactly that set of the verified source.
+    let fileset_sha256 = crate::fileset_source::digest(
+        files
+            .iter()
+            .filter(|(path, _)| crate::fileset_source::included(path))
+            .map(|(path, file)| (path.as_str(), file.payload.as_slice())),
+    );
     // Canonical file content/mode identity permits differently encoded provider archives.
     let source_sha256 = sha256_hex(
         files
@@ -585,6 +596,7 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
             source_archive_sha256: sha256_hex(&data),
             cargo_lock_sha256: sha256_hex(&files["Cargo.lock"].payload),
             runtime_id,
+            fileset_sha256,
         },
         files,
     ))
@@ -598,6 +610,7 @@ fn identity_equal(actual: &Value, expected: &Identity) -> Result<()> {
         "source_sha256",
         "cargo_lock_sha256",
         "runtime_id",
+        "fileset_sha256",
     ] {
         if actual.get(field) != Some(&expected.get(field)) {
             return fail(format!("Release receipt differs in {field}"));
@@ -696,6 +709,15 @@ fn native(root: &Path, env: &Env, arguments: &NativeArguments) -> Result<()> {
         }
     } else if command_text(root, &binary, &["runtime-id"])? != identity.runtime_id {
         return fail("Compiled runtime differs from the verified source.");
+    }
+    if arguments.tool.is_some() {
+        if !embeds_identity(&binary, &identity.fileset_sha256)? {
+            return fail("Cross-built runtime does not embed the verified workspace file set.");
+        }
+    } else if command_text(root, &binary, &["fileset-id"])? != identity.fileset_sha256 {
+        return fail(
+            "Compiled runtime embeds a different workspace file set than the verified source.",
+        );
     }
     fs::create_dir_all(arguments.output)?;
     let output = arguments.output.canonicalize()?;
@@ -1132,6 +1154,7 @@ fn check(root: &Path, env: &Env, output: &Path, complete: bool) -> Result<()> {
             "schema": 1,
             "version": version.version,
             "runtime_id": identity.runtime_id,
+            "fileset_sha256": identity.fileset_sha256,
             "cargo_lock_sha256": identity.cargo_lock_sha256,
             "platforms": runtimes,
             "platform_states": states,

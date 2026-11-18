@@ -46,6 +46,19 @@ try {
     try { & (Join-Path $Scratch ".agent\scripts\bootstrap.ps1") install }
     catch { $Rejected = $_.Exception.Message.Contains("Matching precompiled binary unavailable") }
     if (-not $Rejected) { throw "Windows installer accepted a stale download" }
+    # The binary on its own: init a workspace, build the showcase from the
+    # embedded files, then see that an update has nothing to do.
+    $Smoke = Join-Path $Scratch "init-smoke"
+    & $TestBinary init $Smoke --no-git
+    if ($LASTEXITCODE -ne 0) { throw "cv init failed" }
+    Push-Location $Smoke
+    try {
+        & $TestBinary build
+        if ($LASTEXITCODE -ne 0) { throw "cv build failed in an initialised workspace" }
+        & $TestBinary update
+        if ($LASTEXITCODE -ne 0) { throw "cv update failed in an initialised workspace" }
+    }
+    finally { Pop-Location }
 }
 finally {
     [IO.Directory]::Delete($Scratch, $true)

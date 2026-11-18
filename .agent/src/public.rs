@@ -254,6 +254,7 @@ fn validate_markdown_links(workspace: &Workspace) -> Result<()> {
             if documented_path_is_exempt(named)
                 || base.join(relative).exists()
                 || workspace.path(relative).exists()
+                || left_out_of_workspace(workspace, &workspace.path(relative))
             {
                 continue;
             }
@@ -289,7 +290,7 @@ fn validate_markdown_links(workspace: &Workspace) -> Result<()> {
                     .context("Markdown file has no parent")?
                     .join(clean)
             };
-            if !candidate.exists() {
+            if !candidate.exists() && !left_out_of_workspace(workspace, &candidate) {
                 errors.push(format!(
                     "{} -> {destination}",
                     workspace.relative_text(&path)?
@@ -306,6 +307,30 @@ fn validate_markdown_links(workspace: &Workspace) -> Result<()> {
         missing_paths.join(", ")
     );
     Ok(())
+}
+
+/// A link or path into something `cv init` deliberately does not ship (the
+/// tool's sources, tests and CI, and rendered previews and PDFs). Only a
+/// workspace without the tool's sources tolerates it; a source checkout, where
+/// every such target exists, stays strict.
+fn left_out_of_workspace(workspace: &Workspace, candidate: &Path) -> bool {
+    if workspace.path(".agent/src").is_dir() {
+        return false;
+    }
+    let mut parts: Vec<String> = Vec::new();
+    let Ok(relative) = candidate.strip_prefix(workspace.root()) else {
+        return false;
+    };
+    for component in relative.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                parts.pop();
+            }
+            std::path::Component::Normal(part) => parts.push(part.to_string_lossy().into_owned()),
+            _ => {}
+        }
+    }
+    !crate::fileset_source::included(&parts.join("/"))
 }
 
 /// Placeholders, generated caches and private interview files that only a

@@ -800,6 +800,7 @@ fn different_lock_or_source_or_binary_refused() {
         "source_sha256",
         "cargo_lock_sha256",
         "runtime_id",
+        "fileset_sha256",
     ] {
         release.populate();
         release.change("cv-linux-x86_64.receipt.json", field, &"b".repeat(64));
@@ -1073,6 +1074,9 @@ fn a_clean_checkout_without_an_archive_has_the_same_identity() {
     for field in ["runtime_id", "cargo_lock_sha256"] {
         assert_eq!(identity[field], release.identity[field], "{field}");
     }
+    // This fixture commits the LFS pointer where the archive flow resolved the
+    // object, so only the file set digest's presence is comparable here.
+    assert_eq!(identity["fileset_sha256"].as_str().map(str::len), Some(64));
     fs::write(checkout.join("Cargo.lock"), "dirty\n").unwrap();
     let mut dirty = release.command(&[("CI_COMMIT_SHA", &head)]);
     dirty
@@ -1116,8 +1120,9 @@ fn native_packaging_flow_produces_checkable_evidence() {
     fs::write(
         &binary,
         format!(
-            "#!/usr/bin/env bash\n[[ $1 == runtime-id ]] && echo {}\n",
-            release.identity_field("runtime_id")
+            "#!/usr/bin/env bash\n[[ $1 == runtime-id ]] && echo {}\n[[ $1 == fileset-id ]] && echo {}\nexit 0\n",
+            release.identity_field("runtime_id"),
+            release.identity_field("fileset_sha256")
         ),
     )
     .unwrap();
@@ -1191,7 +1196,11 @@ fn native_packaging_flow_produces_checkable_evidence() {
     let foreign = release.temp.path().join("cross-ccvl");
     fs::write(
         &foreign,
-        format!("fixture\0{}\0tail", release.identity_field("runtime_id")),
+        format!(
+            "fixture\0{}\0{}\0tail",
+            release.identity_field("runtime_id"),
+            release.identity_field("fileset_sha256")
+        ),
     )
     .unwrap();
     for (platform, host) in [
@@ -1241,7 +1250,12 @@ fn cross_packaging_records_a_built_receipt_and_refuses_false_claims() {
     let runtime_id = release.identity_field("runtime_id");
     let binary = release.temp.path().join("cross-ccvl.exe");
     // A foreign executable can not be run; it embeds the runtime id as a string.
-    fs::write(&binary, format!("MZ-fixture\0{runtime_id}\0tail")).unwrap();
+    let fileset = release.identity_field("fileset_sha256");
+    fs::write(
+        &binary,
+        format!("MZ-fixture\0{runtime_id}\0{fileset}\0tail"),
+    )
+    .unwrap();
     let foreign = release.temp.path().join("foreign.exe");
     fs::write(&foreign, "MZ-fixture without identity").unwrap();
     let dist = release.temp.path().join("cross-dist");

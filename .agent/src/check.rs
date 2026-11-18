@@ -737,6 +737,10 @@ fn require_semantic_pdf_match(
     label: &str,
 ) -> Result<()> {
     ensure!(
+        tracked.is_file(),
+        "{label} has not been rendered in this workspace yet; run `cv build` first"
+    );
+    ensure!(
         pdf::semantic_signature(generated)? == pdf::semantic_signature(tracked)?,
         "tracked {label} is stale or platform-dependent"
     );

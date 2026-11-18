@@ -36,6 +36,17 @@ $clock = [Diagnostics.Stopwatch]::StartNew()
 & $exe public-check *>&1 | Out-File -FilePath W:\job\public-check.txt -Encoding utf8
 $code = $LASTEXITCODE
 Add-Check 'public-check' 'public-check on the source of the commit (every document rendered and verified)' ($code -eq 0) ('exit {0} in {1:N0} s' -f $code, $clock.Elapsed.TotalSeconds)
+# The executable on its own, as a user installs it: init a workspace and build the showcase from the embedded files.
+$smoke = Join-Path $work 'init-smoke'
+& $exe init $smoke --no-git *>&1 | Out-Null
+$initCode = $LASTEXITCODE
+if ($initCode -eq 0) {
+    Push-Location $smoke
+    & $exe build *>&1 | Out-File -FilePath W:\job\init-build.txt -Encoding utf8
+    $initCode = $LASTEXITCODE
+    Pop-Location
+}
+Add-Check 'init-build' 'cv init then cv build in a new workspace, from the embedded files' ($initCode -eq 0) "exit $initCode"
 $checks | ConvertTo-Json -Depth 3 | Out-File -FilePath W:\job\result.json -Encoding ascii
 $failed = @($checks | Where-Object { -not $_.ok }).Count
 "checks failed in the clone: $failed"

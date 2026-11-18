@@ -5,6 +5,22 @@ a folder that a coding agent can read and a terminal it can use. The released
 binary supports Linux x86_64 and is verified on Ubuntu 24.04 with glibc 2.39.
 Linux ARM64, macOS and Windows have no verified prebuilt release.
 
+## With the `cv` binary alone
+
+Download `cv` for your platform from the latest release, then:
+
+```sh
+cv init my-cv && cd my-cv
+cv build
+```
+
+`cv init` writes the complete working example from data embedded in the binary
+and records `.cv/manifest.json`. Later, `cv update` shows what a newer `cv`
+would change and `cv update --apply` does it: files you never edited are
+replaced, files you edited stay and the new version lands beside them as
+`<name>.cv-new`, files you deleted stay deleted. See the README for details.
+The two sections below are for working from a clone of the repository.
+
 ## With a coding agent
 
 Download and extract the Linux x86_64 bundle from the repository's latest release, open

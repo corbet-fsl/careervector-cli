@@ -469,3 +469,14 @@ verified PDFs for Poppler, QPDF and pixel comparisons. Each variant still
 compiles twice inside Rust and once in a separate process. Download identity
 checking uses `doctor`; complete setup remains tested in the clean archive
 environment. No document-validation result is reused across CI runs.
+
+## Embedded workspace file set
+
+Every release binary embeds the workspace that `cv init` writes (see
+`.agent/src/fileset_source.rs` for what ships: the tracked tree without the
+tool's own sources, tests, scripts and CI, and without rendered `preview/` and
+`pdf/` outputs). `release-evidence source` records its digest as
+`fileset_sha256`, and `release-evidence native` requires the built binary to
+report the same digest (`cv fileset-id`; a cross-built binary must embed it).
+The release legs run `cv init` and `cv build` as a smoke test
+(`.agent/tests/test_runtime.sh`, `test_runtime.ps1`, `windows-clone-exe.ps1`).

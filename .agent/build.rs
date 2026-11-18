@@ -1,3 +1,5 @@
+#[path = "src/fileset_source.rs"]
+mod fileset_source;
 #[path = "src/runtime_source.rs"]
 mod runtime_source;
 
@@ -18,6 +20,50 @@ fn main() {
     println!("cargo:rustc-env=CCVL_RUNTIME_ID={identity}");
     embed_engine_package(&root);
     embed_layout(&root);
+    embed_fileset(&root);
+}
+
+/// Generate `fileset.rs`: the workspace files `cv init` writes, through
+/// `include_bytes!`, plus their digest (`cv fileset-id`).
+fn embed_fileset(root: &Path) {
+    for directory in [
+        "cv.json",
+        "inputs",
+        "opportunities",
+        "outputs",
+        ".agent/docs",
+        ".agent/schemas",
+        ".agent/scaffolds",
+        ".agent/skills",
+        ".agent/tests/skill-cases.json",
+        ".agent/typst",
+    ] {
+        println!("cargo:rerun-if-changed={directory}");
+    }
+    let paths = fileset_source::files(root).expect("the shipped file set must be listable");
+    let mut source = String::from("pub const FILES: &[(&str, &[u8])] = &[\n");
+    let mut entries = Vec::new();
+    for relative in &paths {
+        let path = root.join(relative);
+        println!("cargo:rerun-if-changed={}", path.display());
+        let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("cannot read {relative}: {e}"));
+        assert!(
+            !bytes.starts_with(b"version https://git-lfs.github.com/spec/v1"),
+            "{relative} is a Git LFS pointer: fetch the LFS objects (bash .agent/scripts/lfs-fetch.sh) before building"
+        );
+        writeln!(
+            source,
+            "    ({relative:?}, include_bytes!({:?})),",
+            path.display().to_string()
+        )
+        .unwrap();
+        entries.push((relative.clone(), bytes));
+    }
+    source.push_str("];\n");
+    let id = fileset_source::digest(entries.iter().map(|(p, b)| (p.as_str(), b.as_slice())));
+    writeln!(source, "pub const ID: &str = {id:?};").unwrap();
+    let output = PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+    std::fs::write(output.join("fileset.rs"), source).unwrap();
 }
 
 /// Generate `engine_package.rs`: the package spec from its `typst.toml` and
