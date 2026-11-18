@@ -32,8 +32,7 @@ impl Workspace {
     }
 
     pub fn at(root: &Path) -> Result<Self> {
-        let root = root
-            .canonicalize()
+        let root = dunce::canonicalize(root)
             .with_context(|| format!("cannot resolve workspace {}", root.display()))?;
         if !root.join("cv.json").is_file() {
             bail!("{} is not a ccvl workspace", root.display());
@@ -79,10 +78,12 @@ impl Workspace {
     /// Observe an attempted input, including absent paths and symlink names.
     pub fn observe_input(&self, path: impl AsRef<Path>) {
         if let Some(observed) = &self.observed {
-            let path = self.path(path);
+            // The engine reports its dependencies with the Windows `\\?\` prefix; the
+            // workspace root has none, and both must spell a file the same way.
+            let path = dunce::simplified(&self.path(path)).to_path_buf();
             let mut observed = observed.lock().expect("input observation lock poisoned");
             observed.insert(path.clone());
-            if let Ok(resolved) = path.canonicalize()
+            if let Ok(resolved) = dunce::canonicalize(&path)
                 && resolved.starts_with(&self.root)
             {
                 observed.insert(resolved);
@@ -108,8 +109,7 @@ impl Workspace {
             self.root.join(value)
         };
         self.observe_input(&candidate);
-        let resolved = candidate
-            .canonicalize()
+        let resolved = dunce::canonicalize(&candidate)
             .with_context(|| format!("cannot resolve {}", value.display()))?;
         if !resolved.starts_with(&self.root) {
             bail!(

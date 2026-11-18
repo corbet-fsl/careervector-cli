@@ -73,7 +73,7 @@ impl State {
         if let Ok(outputs) = &result {
             for output in outputs {
                 inputs.remove(output);
-                if let Ok(path) = output.canonicalize() {
+                if let Ok(path) = dunce::canonicalize(output) {
                     inputs.remove(&path);
                 }
             }
@@ -102,7 +102,7 @@ fn digest(workspace: &Workspace, inputs: &BTreeSet<PathBuf>) -> Vec<u8> {
     for path in inputs {
         hash.update(path.to_string_lossy().as_bytes());
         hash.update([0]);
-        match path.canonicalize() {
+        match dunce::canonicalize(path) {
             Ok(resolved) => {
                 hash.update(resolved.to_string_lossy().as_bytes());
                 hash.update([0]);

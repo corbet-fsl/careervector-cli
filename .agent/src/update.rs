@@ -120,9 +120,7 @@ fn workspace_schema(root: &Path) -> Result<u64> {
 
 /// Work out what bringing `root` to `release` would do. Writes nothing.
 pub fn plan(root: &Path, release: &Release<'_>, migrations: &'static [Migration]) -> Result<Plan> {
-    let root = &root
-        .canonicalize()
-        .context("cannot resolve the workspace")?;
+    let root = &dunce::canonicalize(root).context("cannot resolve the workspace")?;
     let manifest = Manifest::load(root)?;
     if let Some(manifest) = &manifest {
         if manifest.manifest_version > MANIFEST_VERSION {
@@ -249,9 +247,7 @@ pub fn apply(
     migrations: &'static [Migration],
     plan: &Plan,
 ) -> Result<Applied> {
-    let root = &root
-        .canonicalize()
-        .context("cannot resolve the workspace")?;
+    let root = &dunce::canonicalize(root).context("cannot resolve the workspace")?;
     let old_schema = workspace_schema(root)?;
     let mut manifest = Manifest::load(root)?.unwrap_or_else(|| Manifest::new(release));
     let fresh = Manifest::new(release);

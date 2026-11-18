@@ -196,8 +196,8 @@ pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
     let mut ancestor = target.parent();
     while let Some(directory) = ancestor {
         if directory.exists() {
-            let canonical = directory.canonicalize()?;
-            if !canonical.starts_with(root.canonicalize()?) {
+            let canonical = dunce::canonicalize(directory)?;
+            if !canonical.starts_with(dunce::canonicalize(root)?) {
                 bail!(
                     "refusing {relative}: it resolves outside the workspace (nothing was changed)"
                 );
@@ -253,8 +253,7 @@ pub fn init(target: &Path, release: &Release<'_>, force: bool, git: Git) -> Resu
         fs::create_dir_all(target)
             .with_context(|| format!("cannot create {}", target.display()))?;
     }
-    let root = target
-        .canonicalize()
+    let root = dunce::canonicalize(target)
         .with_context(|| format!("cannot resolve {}", target.display()))?;
     for path in release.files.keys() {
         safe_path(&root, path)?;

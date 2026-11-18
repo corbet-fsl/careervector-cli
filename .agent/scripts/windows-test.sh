@@ -176,6 +176,10 @@ if ((failed > 0 || suite_rc != 0)); then
     [[ -r $log ]] || continue
     printf -- '--- why: %s\n' "$(basename -- "$log")"
     sed '1s/^\xEF\xBB\xBF//' "$log" | tr -d '\r' | grep -E 'panicked at|os error|No such file|cannot find|The system cannot|not found|^test .* FAILED' | cut -c1-200 | sort | uniq -c | sort -rn | head -8 || true
+    # The messages of the failed assertions: the lines after each "panicked at" (they carry the
+    # stderr of the command under test), a bounded number per log.
+    sed '1s/^\xEF\xBB\xBF//' "$log" | tr -d '\r' \
+      | awk '/panicked at/ { n = 15 } n > 0 { print substr($0, 1, 220); n-- }' | head -n 120 || true
   done
 fi
 suite_ok=false

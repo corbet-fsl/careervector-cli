@@ -35,7 +35,8 @@ fn copy_workspace(prefix: &str) -> (tempfile::TempDir, PathBuf) {
         .prefix(prefix)
         .tempdir_in(scratch_base())
         .unwrap();
-    let root = temp.path().to_path_buf();
+    // As the binary reports it: resolved, and without the `\\?\` prefix on Windows.
+    let root = dunce::canonicalize(temp.path()).unwrap();
     for entry in walkdir::WalkDir::new(repository()).min_depth(1) {
         let entry = entry.unwrap();
         let relative = entry.path().strip_prefix(repository()).unwrap();
@@ -53,6 +54,12 @@ fn copy_workspace(prefix: &str) -> (tempfile::TempDir, PathBuf) {
         }
     }
     (temp, root)
+}
+
+/// The text with `\` read as `/`: the binary spells a path with the separators of the
+/// opportunity key (`/`) and of the platform, and a test only compares which file it is.
+fn same_path_text(text: &str) -> String {
+    text.replace('\\', "/")
 }
 
 fn run(root: &Path, args: &[&str]) -> Output {
@@ -644,7 +651,8 @@ fn opportunity_flow_from_blank_record_to_measured_pdfs() {
     assert_eq!(built.status.code(), Some(0), "{}", stderr_text(&built));
     let pdf = root.join("opportunities/acme/platform-lead/pdfs/CV_Corbet_Acme_Platform_Lead.pdf");
     assert!(
-        stdout_text(&built).contains(&format!("Rendered {}", pdf.display())),
+        same_path_text(&stdout_text(&built))
+            .contains(&same_path_text(&format!("Rendered {}", pdf.display()))),
         "{}",
         stdout_text(&built)
     );
@@ -696,7 +704,8 @@ fn build_opportunity_single_segment_keys_keep_fresh_outputs() {
     let pdf = root.join("opportunities/acme/lead/pdfs/CV_Corbet_Acme_Lead.pdf");
     let typ = root.join("opportunities/acme/lead/typst/CV_Corbet_Acme_Lead.typ");
     assert!(
-        stdout_text(&built).contains(&format!("Rendered {}", pdf.display())),
+        same_path_text(&stdout_text(&built))
+            .contains(&same_path_text(&format!("Rendered {}", pdf.display()))),
         "{}",
         stdout_text(&built)
     );
@@ -1406,7 +1415,8 @@ fn render_style_needs_its_bundle_file() {
     );
     assert_eq!(output.status.code(), Some(1), "{}", stderr_text(&output));
     assert!(
-        stderr_text(&output).contains("No such file or directory"),
+        // "No such file or directory" on Unix, "The system cannot find the file specified." on Windows.
+        stderr_text(&output).contains("(os error 2)"),
         "{}",
         stderr_text(&output)
     );
@@ -1415,6 +1425,15 @@ fn render_style_needs_its_bundle_file() {
 // ---------------------------------------------------------------------------
 // downstream-check
 // ---------------------------------------------------------------------------
+
+/// `downstream-check` and its fixtures drive Git; a machine without it (the offline
+/// Windows clone) can not run them, and says so instead of failing.
+fn git_is_installed() -> bool {
+    Command::new("git")
+        .arg("--version")
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
 
 fn git(root: &Path, args: &[&str]) {
     let output = Command::new("git")
@@ -1487,6 +1506,10 @@ fn downstream_fixture(prefix: &str) -> (tempfile::TempDir, PathBuf) {
 
 #[test]
 fn downstream_check_passes_an_owned_delta() {
+    if !git_is_installed() {
+        eprintln!("skipped: git is not installed on this machine");
+        return;
+    }
     let (_temp, root) = downstream_fixture("ccvl-cli-downstream-");
     let output = run(
         &root,
@@ -1508,6 +1531,10 @@ fn downstream_check_passes_an_owned_delta() {
 
 #[test]
 fn downstream_check_rejects_upstream_owned_edits() {
+    if !git_is_installed() {
+        eprintln!("skipped: git is not installed on this machine");
+        return;
+    }
     let (_temp, root) = downstream_fixture("ccvl-cli-downstream-edit-");
     fs::write(root.join("README.md"), "downstream edit\n").unwrap();
     git(&root, &["add", "README.md"]);
@@ -1708,14 +1735,23 @@ fn archive_tar_gz_writes_a_readable_gzip_member() {
     fs::remove_file(&path).unwrap();
 }
 
+/// A program and its arguments.
+type Program = (&'static str, &'static [&'static str]);
+
 #[test]
 fn archive_command_runs_and_absolute_resolves() {
     let root = scratch_base();
+    // A command that succeeds without output, and one that fails.
+    let (succeed, fail): (Program, Program) = if cfg!(windows) {
+        (("cmd", &["/C", "exit", "0"]), ("cmd", &["/C", "exit", "1"]))
+    } else {
+        (("true", &[]), ("false", &[]))
+    };
     assert_eq!(
-        archive::command_text(&root, Path::new("true"), &[]).unwrap(),
+        archive::command_text(&root, Path::new(succeed.0), succeed.1).unwrap(),
         ""
     );
-    assert!(archive::command_text(&root, Path::new("false"), &[]).is_err());
+    assert!(archive::command_text(&root, Path::new(fail.0), fail.1).is_err());
     assert!(archive::command_text(&root, Path::new("ccvl-cli-no-such-program"), &[]).is_err());
     let resolved = archive::absolute(Path::new("relative-entry")).unwrap();
     assert!(
