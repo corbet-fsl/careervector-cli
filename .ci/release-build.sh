@@ -53,11 +53,11 @@ export CARGO_TERM_COLOR="${CARGO_TERM_COLOR:-always}"
 export CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG:-0}"
 export CARGO_PROFILE_TEST_DEBUG="${CARGO_PROFILE_TEST_DEBUG:-0}"
 export RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
-# The shared toolchain lock, with the three cross targets of the release (the two Windows targets share the gnullvm ABI).
+# The shared toolchain lock, with the five cross targets of the release (the two Windows targets share the gnullvm ABI; the two darwin targets link against the macOS SDK, CI_MACOS_SDK).
 TOOLCHAIN_LOCK_FILE="$toolchains/install.lock"
 TOOLCHAIN_LOCK_TIMEOUT="${CI_TIMEOUT:-2700}"
 TOOLCHAIN_WANT_NIGHTLY=0
-TOOLCHAIN_WASM_TARGETS='stable:aarch64-unknown-linux-gnu stable:x86_64-pc-windows-gnullvm stable:aarch64-pc-windows-gnullvm'
+TOOLCHAIN_WASM_TARGETS='stable:aarch64-unknown-linux-gnu stable:x86_64-pc-windows-gnullvm stable:aarch64-pc-windows-gnullvm stable:x86_64-apple-darwin stable:aarch64-apple-darwin'
 # shellcheck source=toolchain-lock.sh
 source "$(dirname "${BASH_SOURCE[0]}")/toolchain-lock.sh"
 toolchain_ensure
@@ -72,6 +72,6 @@ cargo-zigbuild --version
 x86_64-w64-mingw32-clang --version | head -1
 # The stages share one directory: what is in it when they are done is the release.
 export CCVL_RELEASE_DIR="$CCID_RELEASE_DIR"
-for stage in rust lint native cross linux-deep archive check; do
+for stage in rust lint native cross macos-tests linux-deep archive check; do
   bash .agent/scripts/release-ci.sh "$stage"
 done

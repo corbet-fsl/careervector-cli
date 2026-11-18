@@ -1186,9 +1186,9 @@ fn check(root: &Path, env: &Env, output: &Path, complete: bool) -> Result<()> {
             return fail(format!("Missing native run provenance: {platform}"));
         }
         let binary_sha256 = verify_package(output, platform, &receipt, &identity)?;
-        if kind == "native" && windows(platform) {
-            // This host can not run a Windows executable: the receipt stands on the
-            // report of the executor that did (see `attest`).
+        if kind == "native" && plan == Plan::NativeWhenAvailable {
+            // This host can not run a Windows or macOS executable: the receipt stands on the
+            // report of the clone that did (see `attest`).
             verify_native_result(output, platform, &receipt, &binary_sha256, &identity)?;
         }
         receipts.insert(file, file_sha256(&path)?);

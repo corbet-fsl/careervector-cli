@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Cross-build one release platform and package it with its receipt. Linux aarch64 is
-# linked by cargo-zigbuild; macOS arm64 is built in the macOS clone with the Command Line
-# Tools (the one cross build that runs on its platform's own OS); both Windows platforms are built for the one gnullvm ABI
+# Cross-build one release platform and package it with its receipt. Linux aarch64 and both
+# macOS platforms are linked by cargo-zigbuild (the macOS ones against the macOS SDK that the
+# runner provides, CI_MACOS_SDK: macos-sdk-env.sh); the macOS clone only tests them. Both Windows platforms are built for the one gnullvm ABI
 # with clang and lld and the mingw-w64 UCRT runtime of llvm-mingw (plain cargo build,
 # no Microsoft SDK, free licences). The result is built, never run here: ARM64 has no
 # native executor and is never emulated, and the Windows x86_64 executable is run
@@ -23,16 +23,20 @@ case "$platform" in
   linux-aarch64) triple=aarch64-unknown-linux-gnu; zig_target="$triple.2.39" ;;
   windows-x86_64) triple=x86_64-pc-windows-gnullvm; driver=llvm-mingw; exe=cv.exe ;;
   windows-arm64) triple=aarch64-pc-windows-gnullvm; driver=llvm-mingw; exe=cv.exe ;;
-  macos-arm64) triple=aarch64-apple-darwin; driver=clt ;;
-  macos-x86_64) echo 'macOS x86_64 is built and run natively in the macOS clone: native-release.sh.' >&2; exit 2 ;;
+  macos-arm64) triple=aarch64-apple-darwin; driver=zigbuild-apple; zig_target="$triple" ;;
+  macos-x86_64) triple=x86_64-apple-darwin; driver=zigbuild-apple; zig_target="$triple" ;;
   linux-x86_64) echo 'Linux x86_64 is built and run natively: native-release.sh.' >&2; exit 2 ;;
   *) echo "Unknown cross platform: $platform" >&2; exit 2 ;;
 esac
-if [[ $driver == zigbuild || $driver == clt ]]; then
-  if [[ $driver == zigbuild ]]; then needed=(cargo-zigbuild zig); else needed=(clang lipo); fi
-  for tool in "${needed[@]}"; do
+if [[ $driver == zigbuild || $driver == zigbuild-apple ]]; then
+  for tool in cargo-zigbuild zig; do
     command -v "$tool" >/dev/null || { echo "Missing cross toolchain: $tool" >&2; exit 2; }
   done
+  if [[ $driver == zigbuild-apple ]]; then
+    # shellcheck source=.agent/scripts/macos-sdk-env.sh
+    source .agent/scripts/macos-sdk-env.sh
+    ccvl_macos_sdk_env
+  fi
 else
   # shellcheck source=.agent/scripts/llvm-mingw-env.sh
   source .agent/scripts/llvm-mingw-env.sh
@@ -70,27 +74,24 @@ build_logged() {
   fi
   rm -f "$log"
 }
-if [[ $driver == zigbuild ]]; then
+if [[ $driver == zigbuild || $driver == zigbuild-apple ]]; then
   build_logged "${CCVL_CARGO_COMMAND[@]}" zigbuild --locked --release \
     --config .cargo/release-profile.toml --target "$zig_target"
   tool="cargo-zigbuild $(cargo-zigbuild --version | awk '{print $NF}'), zig $(zig version)"
-elif [[ $driver == clt ]]; then
-  # The macOS clone is an x86_64 Mac: its Command Line Tools (clang, ld, the SDK) link the
-  # arm64 slice of the same SDK, and the result is never run (ARM is never emulated).
-  [[ $(uname -s) == Darwin ]] || { echo 'macos-arm64 is built in the macOS clone, with its Command Line Tools.' >&2; exit 2; }
-  build_logged "${CCVL_CARGO_COMMAND[@]}" build --locked --release \
-    --config .cargo/release-profile.toml --target "$triple"
-  clang_version="$(clang --version | sed -n '1s/.*clang version \([0-9][0-9.]*\).*/\1/p')"
-  clt_version="$(pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | sed -n 's/^version: //p')" || clt_version=
-  tool="Apple clang ${clang_version:-unknown}, Command Line Tools ${clt_version:-unknown}"
+  if [[ $driver == zigbuild-apple ]]; then tool="$tool, $(ccvl_macos_sdk_identity)"; fi
 else
   build_logged "${CCVL_CARGO_COMMAND[@]}" build --locked --release \
     --config .cargo/release-profile.toml --target "$triple"
   tool="$(ccvl_llvm_mingw_identity "$triple")"
 fi
 binary="${CARGO_TARGET_DIR:-$repo_root/target}/$triple/release/$exe"
-if [[ $driver == clt ]]; then
-  [[ $(lipo -archs "$binary") == arm64 ]] || { echo "$binary is not an arm64 executable." >&2; exit 2; }
+if [[ $driver == zigbuild-apple ]]; then
+  # Never run here; at least say what it is. `file` names the Mach-O architecture.
+  kind="$(file -b "$binary")"
+  case "$platform:$kind" in
+    macos-x86_64:*Mach-O*x86_64*|macos-arm64:*Mach-O*arm64*) ;;
+    *) echo "$binary is not the Mach-O executable of $platform: $kind" >&2; exit 2 ;;
+  esac
 fi
 if [[ $driver == llvm-mingw ]]; then
   # A Windows executable of this ABI imports Windows system libraries only. A mingw

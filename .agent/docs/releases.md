@@ -76,14 +76,13 @@ Missing artifacts never shrink that set. Each platform holds one of three states
 |---|---|---|
 | `tested` | linux-x86_64 | built on the runner, then run there: public check and native runtime checks |
 | `tested` | windows-x86_64 | cross-built on the Linux runner, then the shipped executable and the whole test suite pass in the offline Windows clone (`release-windows`, below), which re-issues its receipt as a native one |
-| `tested` | macos-x86_64 | built natively in the macOS build clone and tested there: the whole Rust test suite, the public check and the runtime checks (`release-macos`, below) |
-| `built` | linux-aarch64, windows-arm64, macos-arm64 | cross-built, never run; ARM is never emulated. macos-arm64 is cross-built in the macOS clone with the Command Line Tools |
-| `pending` | macos-x86_64, macos-arm64, in a fresh draft only | the macOS leg has not run yet: no receipt, no asset |
+| `tested` | macos-x86_64 | cross-built on the Linux runner (cargo-zigbuild with the macOS SDK); the shipped executable and the whole Rust test suite, built on Linux too, pass in the macOS clone (`release-macos`, below), which re-issues its receipt as a native one |
+| `built` | linux-aarch64, windows-arm64, macos-arm64 | cross-built, never run; ARM is never emulated. macos-arm64 is cross-built on the Linux runner like the other ARM64 platforms |
+| `pending` | macos-x86_64, macos-arm64, only before the cross stage | no receipt, no asset |
 
 A `built` platform never claims tests, and a `pending` one has no asset. The states
 of a fresh draft are not a state a release may end in: `windows-x86_64` is `built`
-until the Windows clone has tested it and the macOS platforms are `pending` until the
-macOS clone has built them. `release-promote` checks the set as **complete**
+until the Windows clone has tested it, and so is `macos-x86_64` until the macOS clone has. `release-promote` checks the set as **complete**
 (`cv release-evidence check --complete`): no platform `pending`, and the platforms
 that have a native executor (`windows-x86_64`, `macos-x86_64`) `tested` on it. A
 minor release whose legs have not all passed is refused, naming the leg to repair. The
@@ -98,7 +97,7 @@ release archive as the flake input `llvm-mingw-dist` (flake.nix, pinned in
 flake.lock and pushed to the srv Celler ci cache on every CI run, so a GitHub
 outage never blocks the build; `.ci/llvm-mingw.nix` only unpacks and patches it
 for the Nix loader, `.ci/llvm-mingw.sh` prints its store path): nothing is
-compiled, every licence is free, no Microsoft SDK is accepted, and it ships the
+compiled, every licence is free, and it ships the
 `synchronization` import library that Rust's standard library needs. The package
 carries no `libunwind.dll.a`, so Rust's `-lunwind` can only resolve to the static
 library whatever the Rust version (rustc 1.99 took the import library, 1.100 does not).
@@ -128,7 +127,7 @@ cannot link `synchronization` (for either Windows target), and cargo-xwin stops 
 the `psm` build script of `aarch64-pc-windows-msvc` (clang-cl cannot assemble the
 GNU-syntax file psm picks for a cross build, and cargo-xwin sets the compiler of the
 target itself, so a `CC` override does not help). xwin also needs the Microsoft SDK
-licence accepted, which is Julian's decision to make and was not needed.
+licence accepted; it was not needed.
 
 For the tested platform, the native command verifies the running
 OS/architecture and compiler host, builds the locked target, then runs public
@@ -224,16 +223,18 @@ Cargo target lock and runs the job command.
 |---|---|---|
 | `release` | `release-build` (`.ci/release-build.sh`): the stages `rust`, `lint`, `native`, `cross`, `linux-deep`, `archive`, `check` in this order, never reused from a cache; before it `ccid release build` refuses a version that names no release or is released already, a source that is not `main` and a red verdict, and refreshes the third-party locks; after it ccid drafts the release and uploads every file | `linux` runner |
 | `release-windows` | `release-windows` (`.ci/run-windows.sh`): fetch the shipped `cv-windows-x86_64.exe` from the draft of this commit, run it and the gnullvm test suite in the offline Windows clone, then make the draft say `tested` | `windows` runner (an ordinary slot that owns the offline clone for the job) |
-| `release-macos` | `release-macos` (`.agent/scripts/macos-leg.sh`): build, test and package macOS in the macOS clone (below) | `macos` runner (the macOS build clone); the runner's read credential |
+| `release-macos` | `release-macos` (`.agent/scripts/macos-leg.sh`): test the cross-built macOS executable and suite in the macOS clone and attest it (below) | `macos` runner (the macOS build clone); the runner's read credential |
 | `release-promote` | `release-seal` (`.agent/scripts/release-seal.sh`): re-check the draft of this commit as complete (every platform leg has passed) and derive the two manifests; then ccid writes `SHA256SUMS` and makes it the public release `v<version>`; nothing is copied anywhere | `linux` runner |
 
 `.ci/release-build.sh` provisions the tools (zig, cargo-zigbuild, llvm-mingw, the
-lint and PDF tools) and the three cross targets in the runner's persistent storage, then runs
+lint and PDF tools) and the five cross targets in the runner's persistent storage (the darwin
+ones link against `CI_MACOS_SDK`), then runs
 each stage through `bash .agent/scripts/release-ci.sh <stage>`. All stages share one directory,
 `$CCID_RELEASE_DIR` (`CCVL_RELEASE_DIR`): what is in it when they are done is the release, and
 `ccid release build` uploads it to the draft. The native stage uses
 `bash .agent/scripts/native-release.sh PLATFORM OUTPUT` and the cross stage
-`bash .agent/scripts/cross-release.sh PLATFORM OUTPUT`; a future platform is
+`bash .agent/scripts/cross-release.sh PLATFORM OUTPUT`, followed by the `macos-tests` stage
+(`macos-test-bundle.sh`); a future platform is
 added to the release policy before it is advertised. The draft, its uploads (checked by size on
 the release, resumable) and the promotion are `ccid release` (ccid `docs/release.md`); the legs
 read the draft with `ccid release fetch` and leave their evidence with `ccid release put`.
@@ -290,45 +291,37 @@ The job fails if the executable or any test fails, and the draft is then left as
 `CCVL_WINDOWS_ASSET_DIR=DIR` runs the first two parts on assets from a directory (a local
 rehearsal of a `cross-release.sh` output); it writes the report and attests nothing.
 
-### The macOS leg: built, tested and packaged where it runs
+### The macOS leg: cross-built on Linux, tested where it runs
 
-`release-macos` is the macOS twin of the Windows leg, the third job of the run. It is rendered
-like the others (it needs a macOS ccid on the tool channel, which the runner's tool environment
-names: the hand-written workflow it replaces existed only because ccid had none). The job of the
-label `macos` runs inside the macOS build clone as the user `ci` (bash 3.2, the BSD userland,
-the Command Line Tools, Rust and the compile cache on the clone's persistent disk, no git-lfs,
-no node) and the clone is rolled back after it. `ccid job-run` puts the exact commit at the
-stable source path of that disk (`CCID_SOURCE_ROOT`) and `ccid release leg macos` runs
-`.agent/scripts/macos-leg.sh`:
+The owner's CI rule: build on Linux, the VM clones only test. The Linux `release` job therefore
+builds both macOS platforms: `cross-release.sh` links `x86_64-apple-darwin` and
+`aarch64-apple-darwin` with cargo-zigbuild against the macOS SDK that the runner provides
+(`CI_MACOS_SDK`, the directory `MacOSX*.sdk`, taken from the clone's Command Line Tools;
+`macos-sdk-env.sh`). Without the SDK the link fails with "unable to find system framework
+CoreFoundation", so a missing or invalid SDK stops the cross stage with a message that says so.
+Then the stage `macos-tests` (`macos-test-bundle.sh`) builds the test executables of
+`x86_64-apple-darwin` and the debug `cv` they drive (`cargo zigbuild --locked --workspace
+--all-features --tests --bins`) into `macos-tests-x86_64.tar.gz` of the draft, with `suite.json`
+recording the absolute path of the checkout they were built from: a test executable embeds it.
 
-1. **Before any work**: `ccid release leg macos` has checked that the commit is still `main`
-   and that the draft `build-<commit>` exists and is a draft; the leg itself checks that the
-   release holds macOS (`$CCID_RELEASE_PLATFORMS`; a patch release does not).
-2. **The source.** `git archive` of the commit is the source archive of the evidence (the
-   committed LFS pointers, as the Linux run stages it), and `lfs-fetch.sh` puts the LFS
-   objects over the pointers without git-lfs (the LFS API, each object checked against
-   its pointer's size and SHA-256), so the checkout the build sees is the source the Linux
-   run built from.
-3. **The suite.** `cargo test --locked --workspace --all-features --no-fail-fast` runs in the
-   clone. The publication scripts and their fixtures need bash 4 and GNU tools and are
-   gated to Linux; everything else runs. A failure stops the leg before anything is packaged.
-4. **macos-x86_64** is built natively (`native-release.sh`: the release profile, the public
-   check, the runtime checks) and packaged with a **native** receipt.
-5. **macos-arm64** is cross-built in the same clone with the Command Line Tools
-   (`cross-release.sh`), checked to be an arm64 Mach-O and never run; its **cross** receipt
-   says `built`.
-6. **Evidence.** The two receipts must equal the draft's Linux receipt in source, lock and
-   runtime identity before anything is uploaded.
-7. **The draft.** The executables, their checksums and runtime identities, the bundles and
-   the receipts of both platforms go into the draft, the receipt of a platform last. A
-   file the draft holds with other bytes is replaced, the same is left (`ccid release put`);
-   the manifests are not touched here (the promotion derives them).
-8. The workflow orders the next job; nothing is dispatched.
+`release-macos` (`.agent/scripts/macos-leg.sh`) runs in the macOS build clone (bash 3.2, the BSD
+userland, no cargo, no rustup, no compiler, no git history needed) and only tests:
 
-The suite and the builds share the clone's compile cache (kache with the srv remote). Measured
-on the first run, 2026-11-13: 23 minutes in all, of which the test suite took 5, the macos-x86_64
-release build 8, the cold macos-arm64 cross build 10 and the upload of 12 files (210 MB) 4; a
-leg with a warm cache is shorter.
+1. `ccid release leg macos` has checked that the commit is still `main` and that the draft is
+   there; the script ends at once if the release holds no macOS platform (a patch release).
+2. It fetches `cv-macos-x86_64` and the test bundle from the draft and checks the executable
+   against the sha256 in its cross receipt.
+3. It stages the source (`git archive`, then the LFS objects) and puts the tree at the recorded
+   absolute path, which it creates only if absent or made by a previous leg.
+4. It runs the test executables there with `RUST_TEST_THREADS=4` (eight rebooted the 16 GiB
+   guest) and `CCVL_TEST_BIN` naming the bundled `cv`, then the shipped executable's public check
+   and runtime checks, and writes the report.
+5. `macos-attest.sh` re-issues the cross receipt of `x86_64` as a native one that stands on the
+   report (`release-evidence attest`, as for Windows), writes the manifests again and replaces the
+   changed files of the draft. `macos-arm64` keeps its cross receipt: built, never run.
+
+Measured by mac4k2 on srv: cargo-zigbuild with the SDK builds each darwin target in about 200 s;
+the test executables (`--tests --bins`, x86_64) take 93 s; the suite passes 367/367 in the clone.
 
 ### Mirrors: the files are uploaded from the primary's side
 

@@ -5,7 +5,7 @@ repo_root="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 # shellcheck source=.agent/scripts/release-evidence.sh
 source .agent/scripts/release-evidence.sh
-action="${1:?Usage: release-ci.sh rust|lint|native|cross|linux-deep|archive|check|windows}"
+action="${1:?Usage: release-ci.sh rust|lint|native|cross|macos-tests|linux-deep|archive|check|windows}"
 if [[ ${FORGEJO_ACTIONS:-} == true ]]; then
   [[ ${GITHUB_REPOSITORY:-} == corbet-fsl/careervector-cli && ${GITHUB_REF_NAME:-} == main ]] || {
     echo 'Forgejo release stages require public ccvl main.' >&2; exit 2;
@@ -57,21 +57,31 @@ case "$action" in
     ;;
   cross)
     # Built here for the platforms nothing here can run: ARM64 (never run anywhere
-    # yet), and x86_64 Windows until its test executor exists. macOS waits for
-    # the macOS build clone and stays pending. Which of them this release holds
+    # yet), and the x86_64 Windows and macOS executables, which their clones test later.
+    # Which of them this release holds
     # follows from its version (`cv release-evidence platforms`): a patch release
     # holds Linux x86_64 alone and builds nothing here.
     # Not `< <(...)`: a process substitution drops the exit code, and a failure would land in `wanted`.
     platforms_out="$(release_evidence platforms)"
     mapfile -t wanted <<<"$platforms_out"
     built=0
-    for platform in linux-aarch64 windows-x86_64 windows-arm64; do
+    for platform in linux-aarch64 windows-x86_64 windows-arm64 macos-x86_64 macos-arm64; do
       if printf '%s\n' "${wanted[@]}" | grep -Fxq -- "$platform"; then
         bash .agent/scripts/cross-release.sh "$platform" "$CCVL_RELEASE_DIR"
         built=$((built + 1))
       fi
     done
     printf 'Cross stage: %s platform(s) built; this release holds: %s.\n' "$built" "${wanted[*]}"
+    ;;
+  macos-tests)
+    # The test executables of macos-x86_64 and the debug cv they drive, built here with the
+    # macOS SDK into one bundle of the draft; the macOS clone only runs them.
+    platforms_out="$(release_evidence platforms)"
+    if printf '%s\n' "$platforms_out" | grep -Fxq macos-x86_64; then
+      bash .agent/scripts/macos-test-bundle.sh "$CCVL_RELEASE_DIR"
+    else
+      echo 'This release holds no macOS platform: no macOS test bundle.'
+    fi
     ;;
   linux-deep)
     [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'Linux x86_64 verification worker required.' >&2; exit 2; }

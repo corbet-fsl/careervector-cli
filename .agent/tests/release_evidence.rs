@@ -244,16 +244,26 @@ impl Release {
 
     /// What the Windows clone reports about the shipped `x86_64` executable.
     fn clone_result(&self) -> Value {
+        self.clone_result_for("windows-x86_64")
+    }
+
+    /// What the clone of `platform` (Windows or macOS `x86_64`) reports about its executable.
+    fn clone_result_for(&self, platform: &str) -> Value {
+        let file = if platform.starts_with("windows-") {
+            format!("cv-{platform}.exe")
+        } else {
+            format!("cv-{platform}")
+        };
         let checks: Vec<Value> = NATIVE_RESULT_CHECKS
             .iter()
             .map(|id| json!({"id": id, "name": id, "ok": true, "detail": "fixture"}))
             .collect();
         json!({
             "schema": 1,
-            "platform": "windows-x86_64",
-            "rust_host": host_of("windows-x86_64"),
+            "platform": platform,
+            "rust_host": host_of(platform),
             "source_commit": COMMIT,
-            "executable_sha256": file_hash(&self.output.join("cv-windows-x86_64.exe")),
+            "executable_sha256": file_hash(&self.output.join(file)),
             "runtime_id": self.identity_field("runtime_id"),
             "tests": {"executables": 5, "passed": 227, "failed": 0, "ignored": 0},
             "checks": checks,
@@ -311,9 +321,16 @@ impl Release {
     /// What the `release-macos` leg leaves in the draft: the native receipt of `x86_64`
     /// (built and run in the macOS clone) and the cross receipt of ARM64.
     fn finish_macos(&self) {
+        // The release job cross-built both (zigbuild with the macOS SDK); the clone only tests.
         for platform in ["macos-x86_64", "macos-arm64"] {
             self.write_platform(platform);
         }
+        let result = self.attest_as(
+            "macos-x86_64",
+            &self.clone_result_for("macos-x86_64"),
+            "456",
+        );
+        assert!(result.status.success(), "{}", text(&result));
         self.forget_manifests();
     }
 
@@ -324,7 +341,7 @@ impl Release {
 
     fn write_platform(&self, platform: &str) {
         let host = host_of(platform);
-        let native = platform == "linux-x86_64" || platform == "macos-x86_64";
+        let native = platform == "linux-x86_64";
         let name = format!(
             "cv-{platform}{}",
             if platform.starts_with("windows-") {
@@ -1584,4 +1601,289 @@ fn the_release_script_does_not_read_command_output_through_a_process_substitutio
         !script.contains("< <(release_evidence"),
         "release_evidence output must be captured with $(...)"
     );
+}
+
+/// The macOS leg only tests: the release job cross-builds both macOS platforms on Linux
+/// (zigbuild with the macOS SDK), the clone runs the executables and reports, and
+/// `attest` turns the cross receipt of `x86_64` into a native one that stands on that report.
+#[test]
+fn macos_x86_64_is_tested_only_on_the_clones_report() {
+    let release = Release::new();
+    release.finish_windows();
+    release.finish_macos();
+    let done = release.check_complete();
+    assert!(done.status.success(), "{}", text(&done));
+    let manifest = read_json(&release.output.join("manifest.json"));
+    assert_eq!(manifest["platform_states"]["macos-x86_64"], "tested");
+    assert_eq!(manifest["platform_states"]["macos-arm64"], "built");
+    // The receipt without the clone's report is not evidence.
+    release.forget_manifests();
+    fs::remove_file(release.output.join("cv-macos-x86_64.native-result.json")).unwrap();
+    assert_refused(
+        &release.check_complete(),
+        "Missing native executor report: macos-x86_64",
+    );
+}
+
+#[test]
+fn a_macos_report_with_a_failed_test_does_not_attest() {
+    let release = Release::new();
+    release.write_platform("macos-x86_64");
+    let mut result = release.clone_result_for("macos-x86_64");
+    result["tests"]["failed"] = json!(1);
+    assert_refused(
+        &release.attest_as("macos-x86_64", &result, "456"),
+        "did not pass completely",
+    );
+    let mut other = release.clone_result_for("macos-x86_64");
+    other["executable_sha256"] = json!("b".repeat(64));
+    assert_refused(
+        &release.attest_as("macos-x86_64", &other, "456"),
+        "different executable",
+    );
+}
+
+/// The macOS clone is a Mac of 2026: bash 3.2 and the BSD userland. The scripts that run
+/// there must not use what bash 4 and GNU tools added.
+#[test]
+fn the_macos_clone_scripts_stay_bash_3_2_clean() {
+    for script in ["macos-leg.sh", "macos-attest.sh"] {
+        let text = fs::read_to_string(repository().join(".agent/scripts").join(script)).unwrap();
+        for forbidden in [
+            "mapfile",
+            "readarray",
+            "declare -A",
+            "local -A",
+            "${!",
+            ",,}",
+            "^^}",
+            "sha256sum",
+            "readlink -f",
+            "sed -i ",
+            "date -d",
+        ] {
+            // Comments may name them; code may not.
+            let code: String = text
+                .lines()
+                .filter(|line| !line.trim_start().starts_with('#'))
+                .collect::<Vec<_>>()
+                .join("\n");
+            assert!(
+                !code.contains(forbidden),
+                "{script} uses {forbidden}, which the macOS clone's bash 3.2 or BSD userland lacks"
+            );
+        }
+    }
+}
+
+/// The darwin targets link against the macOS SDK of the runner; without it the build fails
+/// deep in the linker. The check says what is wrong, before anything is built.
+#[test]
+fn the_macos_sdk_is_validated_before_anything_is_built() {
+    let script = repository().join(".agent/scripts/macos-sdk-env.sh");
+    let run = |sdk: Option<&Path>| {
+        let mut command = Command::new("bash");
+        command
+            .args([
+                "-c",
+                "source \"$0\"; ccvl_macos_sdk_env && printf 'SDKROOT=%s\\n' \"$SDKROOT\"",
+            ])
+            .arg(&script)
+            .env_remove("CI_MACOS_SDK")
+            .env_remove("SDKROOT")
+            // No runner default in this test, wherever it runs.
+            .env("CCVL_MACOS_SDK_DEFAULT", "/nonexistent/macos-sdk");
+        if let Some(sdk) = sdk {
+            command.env("CI_MACOS_SDK", sdk);
+        }
+        command.output().unwrap()
+    };
+    let unset = run(None);
+    assert!(!unset.status.success());
+    assert!(
+        text(&unset).contains("CI_MACOS_SDK is not set"),
+        "{}",
+        text(&unset)
+    );
+    let temp = tempfile::tempdir().unwrap();
+    let empty = temp.path().join("empty.sdk");
+    fs::create_dir_all(&empty).unwrap();
+    let invalid = run(Some(&empty));
+    assert!(!invalid.status.success());
+    assert!(
+        text(&invalid).contains("is not a macOS SDK"),
+        "{}",
+        text(&invalid)
+    );
+    let sdk = temp.path().join("MacOSX15.sdk");
+    fs::create_dir_all(sdk.join("System/Library/Frameworks/CoreFoundation.framework")).unwrap();
+    let valid = run(Some(&sdk));
+    assert!(valid.status.success(), "{}", text(&valid));
+    assert!(text(&valid).contains(&format!("SDKROOT={}", sdk.display())));
+    // CI_MACOS_SDK unset: the runners' default location is used when it is a valid SDK.
+    let fallback = Command::new("bash")
+        .args([
+            "-c",
+            "source \"$0\"; ccvl_macos_sdk_env && printf 'SDKROOT=%s\\n' \"$SDKROOT\"",
+        ])
+        .arg(&script)
+        .env_remove("CI_MACOS_SDK")
+        .env("CCVL_MACOS_SDK_DEFAULT", &sdk)
+        .output()
+        .unwrap();
+    assert!(fallback.status.success(), "{}", text(&fallback));
+    assert!(text(&fallback).contains(&format!("SDKROOT={}", sdk.display())));
+}
+
+/// The claim on the fixed source root of the macOS test bundle (macos-test-src.sh): /var/tmp
+/// is shared and persistent on the build host, so a refusal deletes nothing, a symbolic link
+/// is never followed, a second run does not run alongside the first and a cleanup removes
+/// only what its own token made.
+mod xtest_claim {
+    use super::*;
+    use std::os::unix::fs::symlink;
+    use std::time::{Duration, Instant};
+
+    fn bash(root: &Path, script: &str) -> Output {
+        Command::new("bash")
+            .args(["-c", "set -u; cd \"$1\"; source .agent/scripts/macos-sdk-env.sh; source .agent/scripts/macos-test-src.sh; eval \"$2\"", "bash"])
+            .arg(repository())
+            .arg(script)
+            .env("CCVL_MACOS_TEST_ROOT", root)
+            .output()
+            .unwrap()
+    }
+
+    fn scratch_root() -> (tempfile::TempDir, PathBuf) {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("ccvl-xtest");
+        (temp, root)
+    }
+
+    #[test]
+    fn a_refusal_deletes_nothing() {
+        let (_temp, root) = scratch_root();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/precious.txt"), "mine").unwrap();
+        let result = bash(&root, "ccvl_xtest_claim");
+        assert_eq!(result.status.code(), Some(2), "{}", text(&result));
+        assert!(
+            text(&result).contains("was not made by this script"),
+            "{}",
+            text(&result)
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("src/precious.txt")).unwrap(),
+            "mine"
+        );
+        // The release function with no claim of ours removes nothing either.
+        let released = bash(&root, "ccvl_xtest_release");
+        assert!(released.status.success());
+        assert!(root.join("src/precious.txt").exists());
+    }
+
+    #[test]
+    fn the_bundle_script_arms_its_cleanup_only_after_the_claim() {
+        let script =
+            fs::read_to_string(repository().join(".agent/scripts/macos-test-bundle.sh")).unwrap();
+        let claim = script.find("ccvl_xtest_claim || exit").expect("the claim");
+        let cleanup = script
+            .find("ccvl_xtest_release'")
+            .expect("the cleanup trap");
+        assert!(
+            claim < cleanup,
+            "the cleanup that removes the tree must be armed after the claim succeeded"
+        );
+        assert!(
+            !script.contains("rm -rf -- \"$src\""),
+            "the bundle script must not delete the tree by itself"
+        );
+    }
+
+    #[test]
+    fn a_symbolic_link_root_is_never_followed() {
+        let temp = tempfile::tempdir().unwrap();
+        let elsewhere = temp.path().join("elsewhere");
+        fs::create_dir_all(elsewhere.join("src")).unwrap();
+        fs::write(elsewhere.join("src/keep.txt"), "keep").unwrap();
+        fs::write(elsewhere.join("src.made-by-ccvl"), "other").unwrap();
+        let root = temp.path().join("ccvl-xtest");
+        symlink(&elsewhere, &root).unwrap();
+        let result = bash(&root, "ccvl_xtest_claim");
+        assert_eq!(result.status.code(), Some(2), "{}", text(&result));
+        assert!(text(&result).contains("symbolic link"), "{}", text(&result));
+        assert_eq!(
+            fs::read_to_string(elsewhere.join("src/keep.txt")).unwrap(),
+            "keep"
+        );
+        assert!(elsewhere.join("src.made-by-ccvl").exists());
+        assert!(!elsewhere.join("lock").exists());
+    }
+
+    #[test]
+    fn a_second_run_is_refused_and_the_first_runs_tree_survives() {
+        let (_temp, root) = scratch_root();
+        let mut first = Command::new("bash")
+            .args(["-c", "set -u; cd \"$1\"; source .agent/scripts/macos-sdk-env.sh; source .agent/scripts/macos-test-src.sh; ccvl_xtest_claim && : > \"$CCVL_MACOS_TEST_ROOT/ready\" && echo built > \"$CCVL_MACOS_TEST_SRC/file\" && sleep 4; ccvl_xtest_release", "bash"])
+            .arg(repository())
+            .env("CCVL_MACOS_TEST_ROOT", &root)
+            .spawn()
+            .unwrap();
+        let started = Instant::now();
+        while !root.join("ready").exists() {
+            assert!(
+                started.elapsed() < Duration::from_secs(20),
+                "the first run never claimed"
+            );
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        let second = bash(&root, "ccvl_xtest_claim");
+        assert_eq!(second.status.code(), Some(2), "{}", text(&second));
+        assert!(text(&second).contains("holds"), "{}", text(&second));
+        assert_eq!(
+            fs::read_to_string(root.join("src/file")).unwrap(),
+            "built\n"
+        );
+        assert!(first.wait().unwrap().success());
+        let mode = fs::metadata(&root).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o700, "a root made by the claim is private");
+        // The first run cleaned up its own tree, and a later run may claim again.
+        assert!(!root.join("src").exists());
+        let third = bash(&root, "ccvl_xtest_claim && ccvl_xtest_release");
+        assert!(third.status.success(), "{}", text(&third));
+    }
+
+    #[test]
+    fn the_cleanup_removes_only_what_its_own_token_made() {
+        let (_temp, root) = scratch_root();
+        let result = bash(
+            &root,
+            "ccvl_xtest_claim && printf 'someone-else\\n' > \"$CCVL_MACOS_TEST_SRC_MARKER\" && ccvl_xtest_release",
+        );
+        assert!(result.status.success(), "{}", text(&result));
+        assert!(
+            root.join("src").is_dir(),
+            "a marker with another token is not ours to clean up"
+        );
+    }
+
+    #[test]
+    fn the_leftover_of_a_dead_run_is_replaced_and_a_foreign_root_is_refused() {
+        let (_temp, root) = scratch_root();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/old.txt"), "stale").unwrap();
+        fs::write(root.join("src.made-by-ccvl"), "dead-run\n").unwrap();
+        let result = bash(
+            &root,
+            "ccvl_xtest_claim && test -d \"$CCVL_MACOS_TEST_SRC\" && ccvl_xtest_release",
+        );
+        assert!(result.status.success(), "{}", text(&result));
+        assert!(!root.join("src").exists());
+        // A root that is not ours (not owned, here: not a directory) is refused.
+        let (_other, file_root) = scratch_root();
+        fs::write(&file_root, "not a directory").unwrap();
+        let refused = bash(&file_root, "ccvl_xtest_claim");
+        assert_eq!(refused.status.code(), Some(2), "{}", text(&refused));
+        assert_eq!(fs::read_to_string(&file_root).unwrap(), "not a directory");
+    }
 }
