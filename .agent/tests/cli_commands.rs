@@ -14,7 +14,9 @@ use std::time::{Duration, Instant};
 use careervector_cli::{Workspace, archive, content};
 use serde_json::{Value, json};
 
-const BIN: &str = env!("CARGO_BIN_EXE_cv");
+#[path = "test_bin.rs"]
+mod test_bin;
+use test_bin::BIN;
 
 fn repository() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -54,7 +56,7 @@ fn copy_workspace(prefix: &str) -> (tempfile::TempDir, PathBuf) {
 }
 
 fn run(root: &Path, args: &[&str]) -> Output {
-    Command::new(BIN)
+    Command::new(&*BIN)
         .arg("--root")
         .arg(root)
         .args(args)
@@ -65,7 +67,7 @@ fn run(root: &Path, args: &[&str]) -> Output {
 /// The binary with a workspace: `render-style` resolves its files against
 /// the working directory.
 fn run_cwd(root: &Path, args: &[&str]) -> Output {
-    Command::new(BIN)
+    Command::new(&*BIN)
         .current_dir(root)
         .args(args)
         .output()
@@ -761,7 +763,7 @@ fn compare_rejects_unknown_substyles() {
 /// healthy one rebuilds within seconds of the touch.
 fn watch_rebuilds(root: &Path, args: &[&str], outputs_per_build: usize, log: &Path) {
     let profile = root.join("inputs/profile.toml");
-    let mut child = Command::new(BIN)
+    let mut child = Command::new(&*BIN)
         .arg("--root")
         .arg(root)
         .args(args)

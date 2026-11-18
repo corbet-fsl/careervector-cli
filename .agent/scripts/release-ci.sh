@@ -61,7 +61,9 @@ case "$action" in
     # the macOS build clone and stays pending. Which of them this release holds
     # follows from its version (`cv release-evidence platforms`): a patch release
     # holds Linux x86_64 alone and builds nothing here.
-    mapfile -t wanted < <(release_evidence platforms)
+    # Not `< <(...)`: a process substitution drops the exit code, and a failure would land in `wanted`.
+    platforms_out="$(release_evidence platforms)"
+    mapfile -t wanted <<<"$platforms_out"
     built=0
     for platform in linux-aarch64 windows-x86_64 windows-arm64; do
       if printf '%s\n' "${wanted[@]}" | grep -Fxq -- "$platform"; then

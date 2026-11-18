@@ -139,6 +139,10 @@ suite_started=$SECONDS
   --config "target.$expected_host.rustflags=[\"-C\", \"link-arg=-Wl,--exclude-all-symbols\"]" \
   --message-format=json-render-diagnostics > "$build_json"
 jq -r 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null) | .executable' "$build_json" | sort -u > "$scratch/tests.txt"
+# The binary the integration tests drive. Cargo bakes the build host's path to it into the test
+# executables (CARGO_BIN_EXE_cv), which does not exist in the clone: it travels with the tests.
+jq -r 'select(.reason == "compiler-artifact" and .profile.test == false and .target.name == "cv" and (.target.kind | index("bin")) and .executable != null) | .executable' "$build_json" | sort -u > "$scratch/cv-bin.txt"
+[[ $(wc -l < "$scratch/cv-bin.txt") -eq 1 ]] || { echo 'The build did not produce exactly one cv binary for the tests.' >&2; exit 2; }
 test_count="$(wc -l < "$scratch/tests.txt")"
 ((test_count > 0)) || { echo 'The build produced no test executable.' >&2; exit 2; }
 printf '%s test executables built in %s s.\n' "$test_count" "$((SECONDS - suite_started))"
@@ -148,6 +152,9 @@ while IFS= read -r test_exe; do
   printf '%s\n' "$(basename -- "$test_exe")" >> "$scratch/tests.list"
 done < "$scratch/tests.txt"
 vm-win put "$scratch/tests.list"
+# Named cv.exe in the clone whatever it is called here (windows-clone-suite.ps1 sets CCVL_TEST_BIN).
+cp -- "$(cat "$scratch/cv-bin.txt")" "$scratch/cv.exe"
+vm-win put "$scratch/cv.exe"
 vm-win mirror "$repo_root"
 top="${repo_root#/}"
 top="${top%%/*}"

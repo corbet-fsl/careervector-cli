@@ -1549,3 +1549,39 @@ fn the_archive_gate_script_carries_every_identity_field() {
         }
     }
 }
+
+/// Release run 92: the Windows suite ran in a clone where Cargo's baked-in path to the
+/// `cv` binary does not exist. The integration tests resolve it through `test_bin.rs`
+/// (`CCVL_TEST_BIN`), and the clone scripts must carry the binary and name it.
+#[test]
+fn the_windows_suite_carries_the_cv_binary_to_the_clone() {
+    let root = repository();
+    let read = |path: &str| fs::read_to_string(root.join(path)).unwrap();
+    for test in [
+        ".agent/tests/cli_commands.rs",
+        ".agent/tests/init_update.rs",
+    ] {
+        let source = read(test);
+        assert!(
+            source.contains("mod test_bin;"),
+            "{test} must resolve the binary through test_bin.rs"
+        );
+        assert!(
+            !source.contains("env!(\"CARGO_BIN_EXE_cv\")"),
+            "{test} bakes in the build host path"
+        );
+    }
+    assert!(read(".agent/scripts/windows-test.sh").contains("vm-win put \"$scratch/cv.exe\""));
+    assert!(read(".agent/scripts/windows-clone-suite.ps1").contains("CCVL_TEST_BIN"));
+}
+
+/// A process substitution drops the exit code of its command: the cross stage read the
+/// platform list that way and a failure line would have been taken for a platform.
+#[test]
+fn the_release_script_does_not_read_command_output_through_a_process_substitution() {
+    let script = fs::read_to_string(repository().join(".agent/scripts/release-ci.sh")).unwrap();
+    assert!(
+        !script.contains("< <(release_evidence"),
+        "release_evidence output must be captured with $(...)"
+    );
+}

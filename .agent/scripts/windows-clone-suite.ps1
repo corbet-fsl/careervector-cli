@@ -24,6 +24,18 @@ foreach ($name in $names) {
     }
     if (-not $ok) { "COPY FAILED: $name"; $lost++ }
 }
+# The binary the integration tests drive: copied like a test executable, then named for them.
+foreach ($name in @('cv.exe')) {
+    $ok = $false
+    for ($try = 1; $try -le 5 -and -not $ok; $try++) {
+        try {
+            Copy-Item -LiteralPath "W:\job\$name" -Destination "C:\job\$name" -Force -ErrorAction Stop
+            $ok = (Get-Item -LiteralPath "C:\job\$name").Length -eq (Get-Item -LiteralPath "W:\job\$name").Length
+        } catch { Start-Sleep -Seconds 2 }
+    }
+    if (-not $ok) { "COPY FAILED: $name"; $lost++ }
+}
+$env:CCVL_TEST_BIN = 'C:\job\cv.exe'
 "test executables copied: $($names.Count - $lost) of $($names.Count)"
 if ($lost -gt 0) { exit 1 }
 Set-Location $src

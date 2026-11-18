@@ -7,7 +7,9 @@ use std::process::{Command, Output};
 
 use serde_json::Value;
 
-const BIN: &str = env!("CARGO_BIN_EXE_cv");
+#[path = "test_bin.rs"]
+mod test_bin;
+use test_bin::BIN;
 
 fn scratch() -> tempfile::TempDir {
     let base = std::env::var_os("TMPDIR").map_or_else(std::env::temp_dir, PathBuf::from);
@@ -18,7 +20,7 @@ fn scratch() -> tempfile::TempDir {
 }
 
 fn cv(directory: &Path, arguments: &[&str]) -> Output {
-    Command::new(BIN)
+    Command::new(&*BIN)
         .args(arguments)
         .current_dir(directory)
         .output()
