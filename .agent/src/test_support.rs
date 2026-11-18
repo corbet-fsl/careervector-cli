@@ -233,7 +233,7 @@ pub(crate) fn paper_workspace() -> (tempfile::TempDir, Workspace) {
 
 /// Whether Git is installed. A machine without it may skip the tests that drive Git only
 /// where that is expected: Windows (the offline test clone) or a run that says so with
-/// `CCVL_ALLOW_NO_GIT`. Anywhere else a missing Git fails the test, so CI can not pass by
+/// `CCVL_ALLOW_NO_GIT=1`. Anywhere else a missing Git fails the test, so CI can not pass by
 /// silently skipping it.
 pub fn git_or_skip() -> bool {
     let installed = std::process::Command::new("git")
@@ -244,8 +244,8 @@ pub fn git_or_skip() -> bool {
         return true;
     }
     assert!(
-        cfg!(windows) || std::env::var_os("CCVL_ALLOW_NO_GIT").is_some(),
-        "Git is required by this test and is not installed (set CCVL_ALLOW_NO_GIT to skip where that is expected)"
+        cfg!(windows) || std::env::var("CCVL_ALLOW_NO_GIT").is_ok_and(|value| value == "1"),
+        "Git is required by this test and is not installed (set CCVL_ALLOW_NO_GIT=1 to skip where that is expected)"
     );
     eprintln!("skipped: git is not installed on this machine");
     false

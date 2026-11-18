@@ -14,7 +14,7 @@ pub static BIN: LazyLock<PathBuf> = LazyLock::new(|| {
 });
 
 /// Whether Git is installed. Only Windows (the offline test clone) or a run with
-/// `CCVL_ALLOW_NO_GIT` may skip the tests that drive Git; elsewhere a missing Git fails
+/// `CCVL_ALLOW_NO_GIT=1` may skip the tests that drive Git; elsewhere a missing Git fails
 /// the test loudly instead of passing it silently.
 #[allow(dead_code)] // each test crate that includes this file uses a different part
 pub fn git_or_skip() -> bool {
@@ -26,8 +26,8 @@ pub fn git_or_skip() -> bool {
         return true;
     }
     assert!(
-        cfg!(windows) || std::env::var_os("CCVL_ALLOW_NO_GIT").is_some(),
-        "Git is required by this test and is not installed (set CCVL_ALLOW_NO_GIT to skip where that is expected)"
+        cfg!(windows) || std::env::var("CCVL_ALLOW_NO_GIT").is_ok_and(|value| value == "1"),
+        "Git is required by this test and is not installed (set CCVL_ALLOW_NO_GIT=1 to skip where that is expected)"
     );
     eprintln!("skipped: git is not installed on this machine");
     false
