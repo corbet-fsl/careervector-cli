@@ -28,8 +28,44 @@ fn scratch_base() -> PathBuf {
     std::env::var_os("TMPDIR").map_or_else(std::env::temp_dir, PathBuf::from)
 }
 
-/// Copy the repository workspace (minus `.git` and `target/`) to fresh scratch
-/// space.
+/// The files a test workspace is made of, relative to `source`: the tracked files of a
+/// checkout (`git ls-files`), never untracked local products (a scratch directory of hundreds
+/// of megabytes once filled the RAM-backed temp directory, once per parallel test). Without
+/// Git or a `.git` (a source archive, the Windows clone) the tree is walked, minus
+/// `.git`, `target/` and `.agent/cache/`.
+fn workspace_files(source: &Path) -> Vec<PathBuf> {
+    if source.join(".git").exists()
+        && let Ok(output) = Command::new("git")
+            .args(["ls-files", "-z"])
+            .current_dir(source)
+            .output()
+        && output.status.success()
+    {
+        return output
+            .stdout
+            .split(|byte| *byte == 0)
+            .filter(|name| !name.is_empty())
+            .map(|name| PathBuf::from(String::from_utf8_lossy(name).into_owned()))
+            .filter(|relative| source.join(relative).is_file())
+            .collect();
+    }
+    walkdir::WalkDir::new(source)
+        .min_depth(1)
+        .into_iter()
+        .filter_entry(|entry| {
+            let relative = entry.path().strip_prefix(source).unwrap();
+            !(relative.starts_with(".git")
+                || relative.starts_with("target")
+                || relative.starts_with(".agent/cache"))
+        })
+        .map(Result::unwrap)
+        .filter(|entry| entry.file_type().is_file())
+        .map(|entry| entry.path().strip_prefix(source).unwrap().to_path_buf())
+        .collect()
+}
+
+/// Copy the repository workspace (its tracked files) to fresh scratch space under
+/// `TMPDIR`.
 fn copy_workspace(prefix: &str) -> (tempfile::TempDir, PathBuf) {
     let temp = tempfile::Builder::new()
         .prefix(prefix)
@@ -37,23 +73,31 @@ fn copy_workspace(prefix: &str) -> (tempfile::TempDir, PathBuf) {
         .unwrap();
     // As the binary reports it: resolved, and without the `\\?\` prefix on Windows.
     let root = dunce::canonicalize(temp.path()).unwrap();
-    for entry in walkdir::WalkDir::new(repository()).min_depth(1) {
-        let entry = entry.unwrap();
-        let relative = entry.path().strip_prefix(repository()).unwrap();
-        if relative.starts_with(".git") || relative.starts_with("target") {
-            continue;
-        }
-        let destination = root.join(relative);
-        if entry.file_type().is_dir() {
-            fs::create_dir_all(&destination).unwrap();
-        } else if entry.file_type().is_file() {
-            if let Some(parent) = destination.parent() {
-                fs::create_dir_all(parent).unwrap();
-            }
-            fs::copy(entry.path(), &destination).unwrap();
-        }
+    for relative in workspace_files(repository()) {
+        let destination = root.join(&relative);
+        fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        fs::copy(repository().join(&relative), &destination).unwrap();
     }
     (temp, root)
+}
+
+#[test]
+fn a_test_workspace_copies_tracked_files_and_not_untracked_ones() {
+    if !git_or_skip() {
+        return;
+    }
+    let base = tempfile::Builder::new()
+        .prefix("ccvl-cli-copy-list-")
+        .tempdir_in(scratch_base())
+        .unwrap();
+    let source = base.path();
+    fs::write(source.join("tracked.txt"), "tracked\n").unwrap();
+    git(source, &["init", "--quiet"]);
+    git(source, &["add", "tracked.txt"]);
+    fs::write(source.join("scratch.bin"), vec![0u8; 4 * 1024 * 1024]).unwrap();
+    fs::create_dir_all(source.join("local-products")).unwrap();
+    fs::write(source.join("local-products/big.bin"), vec![0u8; 1024]).unwrap();
+    assert_eq!(workspace_files(source), [PathBuf::from("tracked.txt")]);
 }
 
 /// The text with `\` read as `/`: the binary spells a path with the separators of the
