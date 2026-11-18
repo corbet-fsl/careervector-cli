@@ -21,7 +21,8 @@ source_hash="$(field source_sha256)"
 archive_hash="$(field source_archive_sha256)"
 lock_hash="$(field cargo_lock_sha256)"
 runtime_id="$(field runtime_id)"
-for value in "$source_hash" "$archive_hash" "$lock_hash" "$runtime_id"; do
+fileset_id="$(field fileset_sha256)"
+for value in "$source_hash" "$archive_hash" "$lock_hash" "$runtime_id" "$fileset_id"; do
   [[ "$value" =~ ^[0-9a-f]{64}$ ]] || exit 2
 done
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/ccvl-archive.XXXXXXXX")"
@@ -31,6 +32,8 @@ cd "$scratch"
 [[ ! -e .git ]]
 [[ $(sha256sum Cargo.lock | cut -d ' ' -f 1) == "$lock_hash" ]]
 [[ $(.agent/cache/cv/bin/cv runtime-id) == "$runtime_id" ]]
+# The bundle's binary carries the workspace file set the receipt names.
+[[ $(.agent/cache/cv/bin/cv fileset-id) == "$fileset_id" ]]
 bash ./cv setup
 provider=forgejo
 run="${GITHUB_RUN_ID:-}"
@@ -45,6 +48,7 @@ cat > "$scratch/gate-archive.json" <<EOF
   "source_archive_sha256": "$archive_hash",
   "cargo_lock_sha256": "$lock_hash",
   "runtime_id": "$runtime_id",
+  "fileset_sha256": "$fileset_id",
   "kind": "gate",
   "gate": "archive",
   "provider": "$provider",

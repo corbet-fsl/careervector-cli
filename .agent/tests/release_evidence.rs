@@ -1521,3 +1521,31 @@ mod maintainer_scripts {
         }
     }
 }
+
+/// Release run 90 failed in `check`: the archive gate (a shell script that runs where
+/// Git and Rust do not exist, so it can not call `cv`) wrote `gate-archive.json` without
+/// the new `fileset_sha256` identity field, and `check` refused the receipt. Every field
+/// of the identity must be read from the native receipt and written into that gate.
+#[test]
+fn the_archive_gate_script_carries_every_identity_field() {
+    let release = Release::new();
+    let script =
+        fs::read_to_string(repository().join(".agent/scripts/check-release-archive.sh")).unwrap();
+    let heredoc = script
+        .split("cat > \"$scratch/gate-archive.json\" <<EOF")
+        .nth(1)
+        .and_then(|rest| rest.split("\nEOF").next())
+        .expect("the gate-archive.json template");
+    for field in release.identity.as_object().unwrap().keys() {
+        assert!(
+            heredoc.contains(&format!("\"{field}\":")),
+            "check-release-archive.sh does not write the identity field {field} into gate-archive.json"
+        );
+        if field != "schema" && field != "repository" {
+            assert!(
+                script.contains(&format!("field {field}")) || field == "source_commit",
+                "check-release-archive.sh does not read {field} from the native receipt"
+            );
+        }
+    }
+}

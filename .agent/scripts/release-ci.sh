@@ -31,7 +31,17 @@ CCVL_RELEASE_DIR="$(cd "$CCVL_RELEASE_DIR" && pwd)"
 export CCVL_RELEASE_DIR
 release_evidence() {
   ccvl_prepare_release_evidence
-  "${CCVL_RELEASE_EVIDENCE_COMMAND[@]}" "$@"
+  local status=0 log
+  log="$(mktemp "${TMPDIR:-/tmp}/release-evidence.XXXXXX")"
+  # stdout passes through (callers capture it); stderr is kept so that a failure
+  # is always reported with its reason, on stdout as well, in the job log.
+  "${CCVL_RELEASE_EVIDENCE_COMMAND[@]}" "$@" 2>"$log" || status=$?
+  cat "$log" >&2
+  if ((status != 0)); then
+    printf 'release-evidence %s failed (exit %s): %s\n' "$1" "$status" "$(tr '\n' ' ' <"$log")"
+  fi
+  rm -f "$log"
+  return "$status"
 }
 printf 'Release evidence directory: %s\n' "$CCVL_RELEASE_DIR"
 case "$action" in
