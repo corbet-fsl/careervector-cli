@@ -14,7 +14,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::fileset_source::sha256_hex;
 use crate::init::{
-    MANIFEST, MANIFEST_VERSION, Manifest, Release, safe_relative, schema_of, write_file,
+    MANIFEST, MANIFEST_VERSION, Manifest, Release, safe_path, schema_of, write_file,
 };
 
 /// Suffix of the new version placed beside a file the user changed.
@@ -120,12 +120,26 @@ fn workspace_schema(root: &Path) -> Result<u64> {
 
 /// Work out what bringing `root` to `release` would do. Writes nothing.
 pub fn plan(root: &Path, release: &Release<'_>, migrations: &'static [Migration]) -> Result<Plan> {
+    let root = &root
+        .canonicalize()
+        .context("cannot resolve the workspace")?;
     let manifest = Manifest::load(root)?;
     if let Some(manifest) = &manifest {
         if manifest.manifest_version > MANIFEST_VERSION {
             bail!(
                 "this workspace's manifest (format {}) is newer than this cv understands; install a newer cv",
                 manifest.manifest_version
+            );
+        }
+        if manifest.cv_version == release.version
+            && manifest.fileset_id != Manifest::new(release).fileset_id
+        {
+            bail!(
+                "this workspace was written by a cv {} with a different file set than this cv {}; \
+                 they are the same version number but not the same release, so cv cannot tell which is newer. \
+                 Install the cv release that wrote it, or the next version (nothing was changed)",
+                manifest.cv_version,
+                release.version
             );
         }
         if newer(&manifest.cv_version, release.version) {
@@ -171,7 +185,7 @@ pub fn plan(root: &Path, release: &Release<'_>, migrations: &'static [Migration]
     let mut paths: BTreeSet<&str> = release.files.keys().copied().collect();
     paths.extend(recorded.keys().map(String::as_str));
     for path in paths {
-        let current = hash_of(&root.join(safe_relative(path)?))?;
+        let current = hash_of(&safe_path(root, path)?)?;
         let old = recorded.get(path);
         let new = release.files.get(path).map(|bytes| sha256_hex(bytes));
         let action = match (&new, old, &current) {
@@ -223,6 +237,8 @@ pub fn plan(root: &Path, release: &Release<'_>, migrations: &'static [Migration]
 #[derive(Debug)]
 pub struct Applied {
     pub migrated: Vec<&'static str>,
+    /// `(file, where its new version was written)`.
+    pub new_versions: Vec<(String, String)>,
 }
 
 /// Carry out `plan`. The manifest is written last, so an interrupted update
@@ -233,20 +249,28 @@ pub fn apply(
     migrations: &'static [Migration],
     plan: &Plan,
 ) -> Result<Applied> {
+    let root = &root
+        .canonicalize()
+        .context("cannot resolve the workspace")?;
     let old_schema = workspace_schema(root)?;
     let mut manifest = Manifest::load(root)?.unwrap_or_else(|| Manifest::new(release));
     let fresh = Manifest::new(release);
     manifest.cv_version = fresh.cv_version;
     manifest.fileset_id = fresh.fileset_id;
     manifest.manifest_version = MANIFEST_VERSION;
+    // Refuse before the first write: one unsafe path changes nothing.
+    for (path, _) in &plan.items {
+        safe_path(root, path)?;
+    }
+    let mut new_versions = Vec::new();
     for (path, action) in &plan.items {
-        let destination = root.join(safe_relative(path)?);
+        let destination = safe_path(root, path)?;
         let new = release.files.get(path.as_str());
         match action {
             Action::Add | Action::Replace => {
                 let bytes = new.expect("shipped file");
                 write_file(&destination, bytes)?;
-                remove_if_present(&with_suffix(&destination))?;
+                clear_new(root, path, &mut manifest)?;
                 manifest.files.insert(path.clone(), sha256_hex(bytes));
                 manifest.deleted.remove(path);
             }
@@ -254,11 +278,12 @@ pub fn apply(
                 manifest
                     .files
                     .insert(path.clone(), sha256_hex(new.expect("shipped file")));
-                remove_if_present(&with_suffix(&destination))?;
+                clear_new(root, path, &mut manifest)?;
             }
             Action::KeepWriteNew => {
                 // The recorded hash stays: the next update must still see an edit.
-                write_file(&with_suffix(&destination), new.expect("shipped file"))?;
+                let written = place_new(root, path, new.expect("shipped file"), &mut manifest)?;
+                new_versions.push((path.clone(), written));
             }
             Action::KeepDeleted => {
                 manifest.files.remove(path);
@@ -267,6 +292,7 @@ pub fn apply(
             Action::Remove => {
                 remove_if_present(&destination)?;
                 remove_empty_parents(root, &destination);
+                clear_new(root, path, &mut manifest)?;
                 manifest.files.remove(path);
             }
             Action::Forget => {
@@ -280,6 +306,13 @@ pub fn apply(
     }
     // Every shipped file left untouched and unreported already matches the
     // recorded hash; adoption records the ones that equal the new version.
+    // Files the user never touched, to re-record if a migration rewrites them.
+    let mut untouched = Vec::new();
+    for (path, recorded) in &manifest.files {
+        if hash_of(&safe_path(root, path)?)?.as_deref() == Some(recorded.as_str()) {
+            untouched.push(path.clone());
+        }
+    }
     let mut migrated = Vec::new();
     for step in migrations
         .iter()
@@ -291,14 +324,62 @@ pub fn apply(
     if workspace_schema(root)? < release.schema {
         set_schema(&root.join("cv.json"), release.schema)?;
     }
+    // A migration that rewrites an untouched file must not make it look edited.
+    for path in untouched {
+        if let Some(now) = hash_of(&safe_path(root, &path)?)? {
+            manifest.files.insert(path, now);
+        }
+    }
     manifest.save(root)?;
-    Ok(Applied { migrated })
+    Ok(Applied {
+        migrated,
+        new_versions,
+    })
 }
 
-fn with_suffix(path: &Path) -> PathBuf {
-    let mut name = path.as_os_str().to_owned();
-    name.push(NEW_SUFFIX);
-    PathBuf::from(name)
+/// Write the new version of `path` beside it. `<path>.cv-new` is reused only
+/// if cv wrote it and it is unchanged; otherwise `.cv-new.2`, `.3`, ... so that
+/// nothing the user wrote or merged is overwritten. Returns the name written.
+fn place_new(root: &Path, path: &str, bytes: &[u8], manifest: &mut Manifest) -> Result<String> {
+    let mut attempt = 1;
+    loop {
+        let name = if attempt == 1 {
+            format!("{path}{NEW_SUFFIX}")
+        } else {
+            format!("{path}{NEW_SUFFIX}.{attempt}")
+        };
+        let target = safe_path(root, &name)?;
+        let reusable = match hash_of(&target)? {
+            None => !target.exists(),
+            Some(hash) => manifest.new_files.get(&name) == Some(&hash),
+        };
+        if reusable {
+            write_file(&target, bytes)?;
+            manifest.new_files.insert(name.clone(), sha256_hex(bytes));
+            return Ok(name);
+        }
+        attempt += 1;
+    }
+}
+
+/// Remove the `.cv-new` files cv wrote for `path` that are still exactly as
+/// written; one the user changed or wrote is left alone. Forgets all records.
+fn clear_new(root: &Path, path: &str, manifest: &mut Manifest) -> Result<()> {
+    let base = format!("{path}{NEW_SUFFIX}");
+    let names: Vec<String> = manifest
+        .new_files
+        .keys()
+        .filter(|name| **name == base || name.starts_with(&format!("{base}.")))
+        .cloned()
+        .collect();
+    for name in names {
+        let target = safe_path(root, &name)?;
+        if hash_of(&target)?.as_deref() == manifest.new_files.get(&name).map(String::as_str) {
+            remove_if_present(&target)?;
+        }
+        manifest.new_files.remove(&name);
+    }
+    Ok(())
 }
 
 fn remove_if_present(path: &Path) -> Result<()> {
@@ -327,8 +408,15 @@ fn set_schema(path: &Path, schema: u64) -> Result<()> {
         bail!("cv.json has no schema_version to migrate");
     }
     let updated = pattern.replace(&text, format!("${{1}}{schema}"));
-    fs::write(path, updated.as_bytes())?;
+    write_file(path, updated.as_bytes())?;
     Ok(())
+}
+
+/// After `--apply`: where each new version was written, and the fork note.
+pub fn print_applied(applied: &Applied) {
+    for (file, written) in &applied.new_versions {
+        println!("new version of {file} written as {written}");
+    }
 }
 
 /// Print the plan: what would happen, grouped, with the files that need the user.
@@ -346,6 +434,11 @@ pub fn print_plan(plan: &Plan, applied: bool) {
             "cv update: no {MANIFEST} here; adopting this workspace at cv {} (every file that differs from the shipped one is treated as yours)",
             plan.to_version
         ),
+    }
+    if plan.adopted {
+        println!(
+            "note: files this version ships that are missing here are added, because cv cannot tell a deletion from an older checkout; delete them again if you did not want them"
+        );
     }
     let group = |action: Action, heading: String| {
         let files: Vec<&str> = plan

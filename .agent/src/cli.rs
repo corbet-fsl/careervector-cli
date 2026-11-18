@@ -433,9 +433,13 @@ pub fn run() -> Result<ExitCode> {
             let release = crate::init::Release::embedded();
             let plan = crate::update::plan(&root, &release, crate::update::MIGRATIONS)?;
             if *apply {
-                crate::update::apply(&root, &release, crate::update::MIGRATIONS, &plan)?;
+                let applied =
+                    crate::update::apply(&root, &release, crate::update::MIGRATIONS, &plan)?;
+                crate::update::print_plan(&plan, true);
+                crate::update::print_applied(&applied);
+            } else {
+                crate::update::print_plan(&plan, false);
             }
-            crate::update::print_plan(&plan, *apply);
             return Ok(ExitCode::SUCCESS);
         }
         _ => {}

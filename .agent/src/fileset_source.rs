@@ -29,6 +29,8 @@ const EXCLUDED_PREFIXES: &[&str] = &[
 const EXCLUDED_FILES: &[&str] = &[
     ".agent/build.rs",
     ".agent/release-platforms.txt",
+    // The record of released file sets; appending to it must not change the set.
+    ".agent/fileset-releases.txt",
     ".prototools",
     "Cargo.lock",
     "Cargo.toml",

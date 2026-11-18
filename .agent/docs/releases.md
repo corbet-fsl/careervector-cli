@@ -480,3 +480,8 @@ tool's own sources, tests, scripts and CI, and without rendered `preview/` and
 report the same digest (`cv fileset-id`; a cross-built binary must embed it).
 The release legs run `cv init` and `cv build` as a smoke test
 (`.agent/tests/test_runtime.sh`, `test_runtime.ps1`, `windows-clone-exe.ps1`).
+
+`.agent/fileset-releases.txt` records `<version> <fileset sha256>` for each
+published release (append the line after publishing). `release-evidence source`
+fails when the current version is already recorded with a different digest:
+`cv update` compares version numbers, so a changed file set needs a new version.

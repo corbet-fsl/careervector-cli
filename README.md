@@ -103,7 +103,7 @@ it with your workspace.
 
 The code is public and you can still fork it. In a checkout of this repository,
 `cv update` adopts it: files identical to the shipped ones are recorded, every
-other file is treated as yours, and the tool's own sources are never touched. The
+other file is treated as yours, and the tool's own sources are never touched. One caveat: `cv` cannot tell a file you deleted from one an older checkout never had, so a shipped file missing from your fork is added back; delete it again if you did not want it (the plan says so). Symbolic links inside shipped paths are refused, never followed. The
 fork's launcher keeps working:
 
 ```sh

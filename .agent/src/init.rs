@@ -66,6 +66,11 @@ pub struct Manifest {
     /// Shipped files the user deleted; `cv update` never brings them back.
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub deleted: BTreeSet<String>,
+    /// `<name>.cv-new` files cv wrote, with the hash it wrote. Only a file that
+    /// still has that hash is replaced or removed later; a `.cv-new` the user
+    /// started merging in, or wrote themselves, is never touched.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub new_files: BTreeMap<String, String>,
 }
 
 impl Manifest {
@@ -80,6 +85,7 @@ impl Manifest {
             ),
             files: BTreeMap::new(),
             deleted: BTreeSet::new(),
+            new_files: BTreeMap::new(),
         }
     }
 
@@ -95,7 +101,12 @@ impl Manifest {
         if manifest.format != "cv-manifest" {
             bail!("{} is not a cv manifest", path.display());
         }
-        for file in manifest.files.keys().chain(&manifest.deleted) {
+        for file in manifest
+            .files
+            .keys()
+            .chain(&manifest.deleted)
+            .chain(manifest.new_files.keys())
+        {
             safe_relative(file)?;
         }
         Ok(Some(manifest))
@@ -131,12 +142,61 @@ pub fn safe_relative(path: &str) -> Result<PathBuf> {
     Ok(relative.to_path_buf())
 }
 
+/// Write through a temporary file and a rename, so a crash never leaves a
+/// half-written file where a good one was.
 pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("cannot create {}", parent.display()))?;
+    let parent = path.parent().context("a path without a parent")?;
+    fs::create_dir_all(parent).with_context(|| format!("cannot create {}", parent.display()))?;
+    let name = path.file_name().context("a path without a name")?;
+    let mut temporary = name.to_owned();
+    temporary.push(".cv-tmp");
+    let temporary = parent.join(temporary);
+    fs::write(&temporary, bytes)
+        .with_context(|| format!("cannot write {}", temporary.display()))?;
+    fs::rename(&temporary, path).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        anyhow::anyhow!("cannot replace {}: {error}", path.display())
+    })
+}
+
+/// `root` joined with `relative`, after proving that no component of the path
+/// below `root` is a symlink and that its parent stays inside `root`. Every
+/// write and delete of init and update goes through this; a path that fails
+/// is refused by name and nothing is changed.
+pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
+    let relative_path = safe_relative(relative)?;
+    let mut current = root.to_path_buf();
+    for component in relative_path.components() {
+        current.push(component);
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                bail!(
+                    "refusing {relative}: {} is a symbolic link (nothing was changed)",
+                    current.display()
+                );
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+            Err(error) => {
+                return Err(error).with_context(|| format!("cannot inspect {}", current.display()));
+            }
+        }
     }
-    fs::write(path, bytes).with_context(|| format!("cannot write {}", path.display()))
+    let target = root.join(&relative_path);
+    let mut ancestor = target.parent();
+    while let Some(directory) = ancestor {
+        if directory.exists() {
+            let canonical = directory.canonicalize()?;
+            if !canonical.starts_with(root.canonicalize()?) {
+                bail!(
+                    "refusing {relative}: it resolves outside the workspace (nothing was changed)"
+                );
+            }
+            break;
+        }
+        ancestor = directory.parent();
+    }
+    Ok(target)
 }
 
 /// Whether to run `git init` after writing.
@@ -186,13 +246,16 @@ pub fn init(target: &Path, release: &Release<'_>, force: bool, git: Git) -> Resu
     let root = target
         .canonicalize()
         .with_context(|| format!("cannot resolve {}", target.display()))?;
+    for path in release.files.keys() {
+        safe_path(&root, path)?;
+    }
     let mut manifest = Manifest::new(release);
     let mut report = InitReport {
         root: root.clone(),
         ..InitReport::default()
     };
     for (path, bytes) in &release.files {
-        let destination = root.join(safe_relative(path)?);
+        let destination = safe_path(&root, path)?;
         let hash = sha256_hex(bytes);
         if destination.exists() {
             if destination.is_file() && sha256_hex(&fs::read(&destination)?) == hash {

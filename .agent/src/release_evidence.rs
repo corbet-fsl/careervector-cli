@@ -426,6 +426,35 @@ fn engine_package(path: &str) -> bool {
     })
 }
 
+/// Lines `<version> <fileset sha256>`, appended after each release. A version
+/// that was released with another file set must not be released again: `cv
+/// update` compares versions, so a changed set needs a new version number.
+const FILESET_RELEASES: &str = ".agent/fileset-releases.txt";
+
+fn release_version_of(files: &SourceFiles) -> Result<String> {
+    let text = String::from_utf8_lossy(&files["Cargo.toml"].payload).into_owned();
+    let manifest: toml::Table = text.parse().context("Cargo.toml is not valid TOML")?;
+    Ok(manifest
+        .get("package")
+        .and_then(|package| package.get("version"))
+        .and_then(toml::Value::as_str)
+        .context("Cargo.toml has no package version")?
+        .to_owned())
+}
+
+/// Fail when `version` already appears in `record` with a different digest.
+pub fn check_fileset_releases(record: &str, version: &str, fileset: &str) -> Result<()> {
+    for line in record.lines().filter(|line| !line.trim().is_empty()) {
+        let mut fields = line.split_whitespace();
+        if fields.next() == Some(version) && fields.next() != Some(fileset) {
+            return fail(format!(
+                "Version {version} was released with a different workspace file set; bump the version ({FILESET_RELEASES})."
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn is_commit(value: &str) -> bool {
     value.len() == 40
         && value
@@ -579,6 +608,13 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
             .filter(|(path, _)| crate::fileset_source::included(path))
             .map(|(path, file)| (path.as_str(), file.payload.as_slice())),
     );
+    if let Some(record) = files.get(FILESET_RELEASES) {
+        check_fileset_releases(
+            &String::from_utf8_lossy(&record.payload),
+            &release_version_of(&files)?,
+            &fileset_sha256,
+        )?;
+    }
     // Canonical file content/mode identity permits differently encoded provider archives.
     let source_sha256 = sha256_hex(
         files
