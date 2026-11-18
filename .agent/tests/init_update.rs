@@ -364,6 +364,21 @@ mod regressions {
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_owned()
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn p13a_a_symlinked_cv_directory_gets_no_manifest_written_through_it() {
+        let (dir, w) = workspace(&[("a.txt", "v1")]);
+        let elsewhere = dir.path().join("elsewhere");
+        fs::create_dir(&elsewhere).unwrap();
+        fs::remove_dir_all(w.join(".cv")).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, w.join(".cv")).unwrap();
+        let to = release("1.0.1", &[("cv.json", CV9), ("a.txt", "v2")]);
+        let error = plan(&w, &to, &NONE).unwrap_err().to_string();
+        assert!(error.contains("symbolic link"), "{error}");
+        assert_eq!(fs::read_dir(&elsewhere).unwrap().count(), 0);
+        assert_eq!(read(&w, "a.txt").as_deref(), Some("v1"));
+    }
+
     #[test]
     fn p6_the_same_version_with_another_file_set_is_refused() {
         let (_dir, w) = workspace(&[("a.txt", "newer build")]);

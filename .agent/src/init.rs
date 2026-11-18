@@ -90,7 +90,7 @@ impl Manifest {
     }
 
     pub fn load(root: &Path) -> Result<Option<Self>> {
-        let path = root.join(MANIFEST);
+        let path = safe_path(root, MANIFEST)?;
         if !path.is_file() {
             return Ok(None);
         }
@@ -113,7 +113,7 @@ impl Manifest {
     }
 
     pub fn save(&self, root: &Path) -> Result<()> {
-        let path = root.join(MANIFEST);
+        let path = safe_path(root, MANIFEST)?;
         let mut text = serde_json::to_string_pretty(self)?;
         text.push('\n');
         write_file(&path, text.as_bytes())
