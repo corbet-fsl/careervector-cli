@@ -407,12 +407,48 @@ mod regressions {
         assert_eq!(read(&w, "a.txt.cv-new"), None);
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn p10_a_planted_cv_tmp_link_is_not_written_through() {
+        let (dir, w) = workspace(&[("a.txt", "v1")]);
+        let outside = dir.path().join("outside.txt");
+        fs::write(&outside, "precious").unwrap();
+        std::os::unix::fs::symlink(&outside, w.join("a.txt.cv-tmp")).unwrap();
+        run(
+            &w,
+            &release("1.0.1", &[("cv.json", CV9), ("a.txt", "v2")]),
+            &NONE,
+        );
+        assert_eq!(read(&w, "a.txt").as_deref(), Some("v2"));
+        assert_eq!(fs::read_to_string(&outside).unwrap(), "precious");
+    }
+
+    #[test]
+    fn p11_a_persons_own_cv_tmp_file_is_left_alone() {
+        let (_dir, w) = workspace(&[("a.txt", "v1")]);
+        fs::write(w.join("a.txt.cv-tmp"), "my scratch").unwrap();
+        run(
+            &w,
+            &release("1.0.1", &[("cv.json", CV9), ("a.txt", "v2")]),
+            &NONE,
+        );
+        assert_eq!(read(&w, "a.txt").as_deref(), Some("v2"));
+        assert_eq!(read(&w, "a.txt.cv-tmp").as_deref(), Some("my scratch"));
+    }
+
     #[test]
     fn the_release_record_refuses_a_version_released_with_another_file_set() {
         use careervector_cli::release_evidence::check_fileset_releases;
-        let record = "0.1.0 aaaa\n0.2.0 bbbb\n";
-        assert!(check_fileset_releases(record, "0.1.0", "aaaa").is_ok());
-        assert!(check_fileset_releases(record, "0.3.0", "cccc").is_ok());
-        assert!(check_fileset_releases(record, "0.2.0", "cccc").is_err());
+        let ok = |record: &str, v: &str, d: &str| check_fileset_releases(record, v, d).is_ok();
+        // The newest line must be this release.
+        assert!(ok("0.1.0 aaaa\n", "0.1.0", "aaaa"));
+        assert!(!ok("", "0.1.0", "aaaa"), "an empty record is not a record");
+        assert!(!ok("0.1.0 aaaa\n", "0.2.0", "bbbb"), "unrecorded release");
+        // An earlier line of the same version needs the same digest.
+        assert!(!ok("0.2.0 aaaa\n0.2.0 bbbb\n", "0.2.0", "bbbb"));
+        // A new digest needs a strictly greater version.
+        assert!(ok("0.1.0 aaaa\n0.2.0 bbbb\n", "0.2.0", "bbbb"));
+        assert!(!ok("0.2.0 aaaa\n0.1.5 bbbb\n", "0.1.5", "bbbb"));
+        assert!(!ok("0.2.0 aaaa\n0.2.0 bbbb\n", "0.2.0", "bbbb"));
     }
 }

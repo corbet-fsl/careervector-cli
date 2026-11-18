@@ -142,21 +142,31 @@ pub fn safe_relative(path: &str) -> Result<PathBuf> {
     Ok(relative.to_path_buf())
 }
 
-/// Write through a temporary file and a rename, so a crash never leaves a
-/// half-written file where a good one was.
+/// Write through a fresh, exclusively created temporary file in the same
+/// directory and an atomic rename, so a crash never leaves a half-written file
+/// and no existing path (a planted link, a user's file) is ever written through.
 pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
+    use std::io::Write as _;
     let parent = path.parent().context("a path without a parent")?;
     fs::create_dir_all(parent).with_context(|| format!("cannot create {}", parent.display()))?;
-    let name = path.file_name().context("a path without a name")?;
-    let mut temporary = name.to_owned();
-    temporary.push(".cv-tmp");
-    let temporary = parent.join(temporary);
-    fs::write(&temporary, bytes)
-        .with_context(|| format!("cannot write {}", temporary.display()))?;
-    fs::rename(&temporary, path).map_err(|error| {
-        let _ = fs::remove_file(&temporary);
-        anyhow::anyhow!("cannot replace {}: {error}", path.display())
-    })
+    let mut temporary = tempfile::NamedTempFile::new_in(parent)
+        .with_context(|| format!("cannot create a temporary file in {}", parent.display()))?;
+    temporary
+        .write_all(bytes)
+        .with_context(|| format!("cannot write {}", path.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        // A temporary file is private; keep the target's mode, else a normal file's.
+        let mode = fs::metadata(path).map_or(0o644, |m| m.permissions().mode() & 0o777);
+        temporary
+            .as_file()
+            .set_permissions(fs::Permissions::from_mode(mode))?;
+    }
+    temporary
+        .persist(path)
+        .map_err(|error| anyhow::anyhow!("cannot replace {}: {}", path.display(), error.error))?;
+    Ok(())
 }
 
 /// `root` joined with `relative`, after proving that no component of the path

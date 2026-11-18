@@ -442,13 +442,54 @@ fn release_version_of(files: &SourceFiles) -> Result<String> {
         .to_owned())
 }
 
-/// Fail when `version` already appears in `record` with a different digest.
+fn version_key(version: &str) -> Vec<u64> {
+    version
+        .split(['-', '+'])
+        .next()
+        .unwrap_or_default()
+        .split('.')
+        .map(|part| part.parse().unwrap_or(0))
+        .collect()
+}
+
+fn version_greater(a: &str, b: &str) -> bool {
+    let (mut a, mut b) = (version_key(a), version_key(b));
+    let len = a.len().max(b.len());
+    a.resize(len, 0);
+    b.resize(len, 0);
+    a > b
+}
+
+/// The release record is a precondition of a release: its newest line is this
+/// `<version> <digest>`; an earlier line of the same version has the same
+/// digest; a digest not seen before needs a version above every earlier line.
 pub fn check_fileset_releases(record: &str, version: &str, fileset: &str) -> Result<()> {
-    for line in record.lines().filter(|line| !line.trim().is_empty()) {
-        let mut fields = line.split_whitespace();
-        if fields.next() == Some(version) && fields.next() != Some(fileset) {
+    let lines: Vec<(&str, &str)> = record
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| {
+            let mut fields = line.split_whitespace();
+            (
+                fields.next().unwrap_or_default(),
+                fields.next().unwrap_or_default(),
+            )
+        })
+        .collect();
+    if lines.last() != Some(&(version, fileset)) {
+        return fail(format!(
+            "The newest line of {FILESET_RELEASES} must be `{version} {fileset}`: record the release together with the version bump."
+        ));
+    }
+    let earlier = &lines[..lines.len() - 1];
+    for (other_version, other_digest) in earlier {
+        if *other_version == version && *other_digest != fileset {
             return fail(format!(
-                "Version {version} was released with a different workspace file set; bump the version ({FILESET_RELEASES})."
+                "Version {version} was recorded with a different workspace file set; bump the version ({FILESET_RELEASES})."
+            ));
+        }
+        if *other_digest != fileset && !version_greater(version, other_version) {
+            return fail(format!(
+                "A new workspace file set needs a version above {other_version} ({FILESET_RELEASES})."
             ));
         }
     }
@@ -608,13 +649,16 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
             .filter(|(path, _)| crate::fileset_source::included(path))
             .map(|(path, file)| (path.as_str(), file.payload.as_slice())),
     );
-    if let Some(record) = files.get(FILESET_RELEASES) {
-        check_fileset_releases(
-            &String::from_utf8_lossy(&record.payload),
-            &release_version_of(&files)?,
-            &fileset_sha256,
-        )?;
-    }
+    let Some(record) = files.get(FILESET_RELEASES) else {
+        return fail(format!(
+            "{FILESET_RELEASES} is missing: the release must record its file set"
+        ));
+    };
+    check_fileset_releases(
+        &String::from_utf8_lossy(&record.payload),
+        &release_version_of(&files)?,
+        &fileset_sha256,
+    )?;
     // Canonical file content/mode identity permits differently encoded provider archives.
     let source_sha256 = sha256_hex(
         files

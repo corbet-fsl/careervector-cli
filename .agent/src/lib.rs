@@ -11,7 +11,7 @@ pub mod content;
 pub mod downstream;
 mod engine_package;
 #[allow(dead_code)] // shared with build.rs; the tree walk is only used there and in tests
-mod fileset_source;
+pub mod fileset_source;
 pub mod format;
 pub mod init;
 pub mod layout;

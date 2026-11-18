@@ -131,6 +131,16 @@ impl Release {
             )
             .into_bytes(),
         ));
+        // The release record: this version with the digest of the shipped set,
+        // as the verified source resolves it (the LFS object, not the pointer).
+        let shipped = [("cv.json", b"{}\n".to_vec()), (LFS_FILE, object.clone())];
+        let record = format!(
+            "{version} {}\n",
+            careervector_cli::fileset_source::digest(
+                shipped.iter().map(|(p, b)| (*p, b.as_slice()))
+            )
+        );
+        files.push((".agent/fileset-releases.txt".into(), record.into_bytes()));
         for (name, payload) in &files {
             let path = root.join(name);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -1054,6 +1064,19 @@ fn a_clean_checkout_without_an_archive_has_the_same_identity() {
         assert!(output.status.success(), "{}", text(&output));
         String::from_utf8(output.stdout).unwrap().trim().to_owned()
     };
+    // The checkout commits the LFS pointer, so its set digest is the pointer's.
+    let shipped: Vec<(&str, &[u8])> = tree
+        .entries
+        .iter()
+        .filter(|entry| careervector_cli::fileset_source::included(&entry.name))
+        .map(|entry| (entry.name.as_str(), entry.data.as_slice()))
+        .collect();
+    let line = format!(
+        "{} {}\n",
+        release.version,
+        careervector_cli::fileset_source::digest(shipped)
+    );
+    fs::write(checkout.join(".agent/fileset-releases.txt"), line).unwrap();
     git(&["init", "--quiet", "--template="]);
     git(&["add", "."]);
     git(&["commit", "--quiet", "-m", "fixture"]);
