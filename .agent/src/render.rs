@@ -1,8 +1,8 @@
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt::Write as _;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
 use ctypst::{CompileRequest, Document, Engine, PageConstraint};
@@ -885,6 +885,28 @@ fn remove_stale_opportunity_outputs(
     cover_enabled: bool,
     previous: &[String],
 ) -> Result<()> {
+    // Current outputs are never stale: for single-segment keys (e.g.
+    // `acme/lead`) the previous interim hyphenated name equals the current
+    // underscore name, so deleting it would remove the just-written PDF/.typ.
+    let mut current = HashSet::new();
+    for (directory, extension, name) in [
+        (pdfs_dir, "pdf", format!("CV_{stem}")),
+        (typst_dir, "typ", format!("CV_{stem}")),
+    ] {
+        current.insert(normalised_path(
+            &directory.join(format!("{name}.{extension}")),
+        ));
+    }
+    if cover_enabled {
+        for (directory, extension, name) in [
+            (pdfs_dir, "pdf", format!("CL_{stem}")),
+            (typst_dir, "typ", format!("CL_{stem}")),
+        ] {
+            current.insert(normalised_path(
+                &directory.join(format!("{name}.{extension}")),
+            ));
+        }
+    }
     let mut stale = vec![
         pdfs_dir.join("cv.pdf"),
         pdfs_dir.join("cl.pdf"),
@@ -908,11 +930,35 @@ fn remove_stale_opportunity_outputs(
         ]);
     }
     for path in stale {
+        if current.contains(&normalised_path(&path)) {
+            continue;
+        }
         if path.is_file() {
             fs::remove_file(path)?;
         }
     }
     Ok(())
+}
+
+/// Lexically normalised path for output comparisons: resolves `.` and `..`
+/// without touching the filesystem so the same file spelled two ways
+/// compares equal.
+fn normalised_path(path: &Path) -> PathBuf {
+    let mut normalised = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalised.pop();
+            }
+            _ => normalised.push(component.as_os_str()),
+        }
+    }
+    if normalised.as_os_str().is_empty() {
+        PathBuf::from(".")
+    } else {
+        normalised
+    }
 }
 
 #[cfg(test)]

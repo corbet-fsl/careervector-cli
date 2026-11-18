@@ -134,6 +134,38 @@ fn cleanup_removes_only_exact_generated_opportunity_outputs() {
     }
 }
 
+#[test]
+fn cleanup_keeps_current_outputs_when_previous_name_matches() {
+    // Single-segment keys (`acme/lead`) have no hyphen or underscore to
+    // resplit, so the previous interim hyphenated name equals the current
+    // underscore name. That stale entry must never delete a fresh output.
+    let directory = tempdir().unwrap();
+    let pdfs = directory.path().join("pdfs");
+    let typst = directory.path().join("typst");
+    fs::create_dir_all(&pdfs).unwrap();
+    fs::create_dir_all(&typst).unwrap();
+    let stem = "Taylor_Acme_Lead";
+    let current = [
+        pdfs.join(format!("CV_{stem}.pdf")),
+        pdfs.join(format!("CL_{stem}.pdf")),
+        typst.join(format!("CV_{stem}.typ")),
+        typst.join(format!("CL_{stem}.typ")),
+    ];
+    let previous = [format!("CV_{stem}"), format!("CL_{stem}")];
+    for path in &current {
+        fs::write(path, b"fresh bytes").unwrap();
+    }
+    remove_stale_opportunity_outputs(&pdfs, &typst, stem, true, &previous).unwrap();
+    for path in &current {
+        assert_eq!(
+            fs::read(path).unwrap(),
+            b"fresh bytes",
+            "{}",
+            path.display()
+        );
+    }
+}
+
 fn named_opportunity_workspace() -> (tempfile::TempDir, Workspace) {
     let directory = tempdir().unwrap();
     let root = directory.path();

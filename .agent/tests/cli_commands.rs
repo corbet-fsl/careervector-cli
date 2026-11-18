@@ -678,6 +678,32 @@ fn build_opportunity_with_a_cover_letter_renders_both_documents() {
 }
 
 #[test]
+fn build_opportunity_single_segment_keys_keep_fresh_outputs() {
+    // Regression: `acme/lead` has no hyphen or underscore, so the previous
+    // interim hyphenated filename equals the current one. The stale cleanup
+    // must not delete the just-written PDF and .typ.
+    let (_temp, root) = copy_workspace("ccvl-cli-opportunity-single-");
+    let created = run(
+        &root,
+        &["new-opportunity", "--no-cover-letter", "acme", "lead"],
+    );
+    assert_eq!(created.status.code(), Some(0), "{}", stderr_text(&created));
+    fill_opportunity_record(&root, "acme", "lead", false);
+    let built = run(&root, &["build-opportunity", "acme", "lead"]);
+    assert_eq!(built.status.code(), Some(0), "{}", stderr_text(&built));
+    let pdf = root.join("opportunities/acme/lead/pdfs/CV_Corbet_Acme_Lead.pdf");
+    let typ = root.join("opportunities/acme/lead/typst/CV_Corbet_Acme_Lead.typ");
+    assert!(
+        stdout_text(&built).contains(&format!("Rendered {}", pdf.display())),
+        "{}",
+        stdout_text(&built)
+    );
+    assert!(pdf.is_file(), "CV pdf was deleted by stale cleanup");
+    assert!(typ.is_file(), "CV typ was deleted by stale cleanup");
+    assert_eq!(pdf_pages(&pdf), 4, "CV must keep its four pages");
+}
+
+#[test]
 fn measure_opportunity_rejects_unknown_records() {
     let (_temp, root) = copy_workspace("ccvl-cli-measure-opportunity-");
     let output = run(&root, &["measure-opportunity", "acme", "nosuchrole"]);
