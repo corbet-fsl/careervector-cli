@@ -14,7 +14,7 @@
 
 # ccvl_xtest_claim: take the lock and make the empty tree. Returns 2 (nothing touched) if it can not.
 ccvl_xtest_claim() {
-  local root="$CCVL_MACOS_TEST_ROOT" src="$CCVL_MACOS_TEST_SRC" marker="$CCVL_MACOS_TEST_SRC_MARKER"
+  local root="$CCVL_MACOS_TEST_ROOT" src="$CCVL_MACOS_TEST_SRC" marker="$CCVL_MACOS_TEST_SRC_MARKER" mode
   if [[ -L $root ]]; then
     echo "$root is a symbolic link; refusing to build there." >&2
     return 2
@@ -24,6 +24,12 @@ ccvl_xtest_claim() {
   fi
   if [[ ! -d $root || -L $root || ! -O $root ]]; then
     echo "$root is not a directory of ours; refusing to build there." >&2
+    return 2
+  fi
+  # Private: not writable by group or others, or someone else could swap what we build in.
+  mode="$(stat -c %a -- "$root")"
+  if (( (8#$mode & 8#022) != 0 )); then
+    echo "$root has mode $mode: writable by group or others; refusing to build there." >&2
     return 2
   fi
   exec 9>"$root/lock" || { echo "cannot open the lock in $root." >&2; return 2; }

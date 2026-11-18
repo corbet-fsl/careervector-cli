@@ -1647,7 +1647,7 @@ fn a_macos_report_with_a_failed_test_does_not_attest() {
 /// there must not use what bash 4 and GNU tools added.
 #[test]
 fn the_macos_clone_scripts_stay_bash_3_2_clean() {
-    for script in ["macos-leg.sh", "macos-attest.sh"] {
+    for script in ["macos-leg.sh", "macos-attest.sh", "macos-bundle-check.sh"] {
         let text = fs::read_to_string(repository().join(".agent/scripts").join(script)).unwrap();
         for forbidden in [
             "mapfile",
@@ -1754,6 +1754,13 @@ mod xtest_claim {
             .unwrap()
     }
 
+    /// A root as the claim wants it: ours and private (a directory made by the test would
+    /// inherit the umask and a setgid bit of the machine's scratch space).
+    fn private(root: &Path) {
+        use std::os::unix::fs::PermissionsExt as _;
+        fs::set_permissions(root, fs::Permissions::from_mode(0o700)).unwrap();
+    }
+
     fn scratch_root() -> (tempfile::TempDir, PathBuf) {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("ccvl-xtest");
@@ -1764,6 +1771,7 @@ mod xtest_claim {
     fn a_refusal_deletes_nothing() {
         let (_temp, root) = scratch_root();
         fs::create_dir_all(root.join("src")).unwrap();
+        private(&root);
         fs::write(root.join("src/precious.txt"), "mine").unwrap();
         let result = bash(&root, "ccvl_xtest_claim");
         assert_eq!(result.status.code(), Some(2), "{}", text(&result));
@@ -1871,6 +1879,7 @@ mod xtest_claim {
     fn the_leftover_of_a_dead_run_is_replaced_and_a_foreign_root_is_refused() {
         let (_temp, root) = scratch_root();
         fs::create_dir_all(root.join("src")).unwrap();
+        private(&root);
         fs::write(root.join("src/old.txt"), "stale").unwrap();
         fs::write(root.join("src.made-by-ccvl"), "dead-run\n").unwrap();
         let result = bash(
@@ -1885,5 +1894,110 @@ mod xtest_claim {
         let refused = bash(&file_root, "ccvl_xtest_claim");
         assert_eq!(refused.status.code(), Some(2), "{}", text(&refused));
         assert_eq!(fs::read_to_string(&file_root).unwrap(), "not a directory");
+    }
+
+    #[test]
+    fn a_root_writable_by_group_or_others_is_refused_untouched() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let (_temp, root) = scratch_root();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/keep.txt"), "keep").unwrap();
+        fs::write(root.join("src.made-by-ccvl"), "dead-run\n").unwrap();
+        for mode in [0o770, 0o707, 0o777, 0o722] {
+            fs::set_permissions(&root, fs::Permissions::from_mode(mode)).unwrap();
+            let result = bash(&root, "ccvl_xtest_claim");
+            assert_eq!(result.status.code(), Some(2), "{mode:o}: {}", text(&result));
+            assert!(
+                text(&result).contains("writable by group or others"),
+                "{}",
+                text(&result)
+            );
+            assert!(
+                root.join("src/keep.txt").exists(),
+                "{mode:o}: nothing may be touched"
+            );
+            assert!(
+                !root.join("lock").exists(),
+                "{mode:o}: not even the lock file"
+            );
+        }
+        // 0755 and 0700 have no group or other write bit.
+        for mode in [0o755, 0o700] {
+            fs::set_permissions(&root, fs::Permissions::from_mode(mode)).unwrap();
+            let result = bash(&root, "ccvl_xtest_claim && ccvl_xtest_release");
+            assert!(result.status.success(), "{mode:o}: {}", text(&result));
+        }
+    }
+}
+
+/// The macOS leg refuses a test bundle that is not exactly what its suite.json lists.
+mod bundle_check {
+    use super::*;
+    use std::os::unix::fs::symlink;
+
+    fn check(dir: &Path) -> Output {
+        Command::new("bash")
+            .args(["-c", "set -u; source \"$1/.agent/scripts/macos-bundle-check.sh\"; ccvl_bundle_complete \"$2\"", "bash"])
+            .arg(repository())
+            .arg(dir)
+            .output()
+            .unwrap()
+    }
+
+    fn bundle() -> tempfile::TempDir {
+        let jq = Command::new("jq").arg("--version").output();
+        assert!(
+            jq.is_ok_and(|output| output.status.success()),
+            "jq is required by the macOS leg and its tests"
+        );
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("tests")).unwrap();
+        fs::write(dir.path().join("cv"), "cv").unwrap();
+        fs::write(dir.path().join("tests/unit-1"), "t1").unwrap();
+        fs::write(
+            dir.path().join("suite.json"),
+            r#"{"files": {"cv": "aa", "tests/unit-1": "bb"}, "tests": ["unit-1"]}"#,
+        )
+        .unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_complete_bundle_passes() {
+        let dir = bundle();
+        let result = check(dir.path());
+        assert!(result.status.success(), "{}", text(&result));
+    }
+
+    #[test]
+    fn an_unlisted_file_is_refused_by_name() {
+        let dir = bundle();
+        fs::write(dir.path().join("tests/extra-2"), "x").unwrap();
+        fs::write(dir.path().join("planted.sh"), "x").unwrap();
+        let result = check(dir.path());
+        assert_eq!(result.status.code(), Some(2), "{}", text(&result));
+        assert!(
+            text(&result).contains("tests/extra-2") && text(&result).contains("planted.sh"),
+            "{}",
+            text(&result)
+        );
+    }
+
+    #[test]
+    fn a_listed_file_that_is_missing_is_refused_by_name() {
+        let dir = bundle();
+        fs::remove_file(dir.path().join("tests/unit-1")).unwrap();
+        let result = check(dir.path());
+        assert_eq!(result.status.code(), Some(2), "{}", text(&result));
+        assert!(text(&result).contains("tests/unit-1"), "{}", text(&result));
+    }
+
+    #[test]
+    fn a_link_in_the_bundle_is_refused() {
+        let dir = bundle();
+        symlink("/etc/passwd", dir.path().join("tests/link")).unwrap();
+        let result = check(dir.path());
+        assert_eq!(result.status.code(), Some(2), "{}", text(&result));
+        assert!(text(&result).contains("tests/link"), "{}", text(&result));
     }
 }

@@ -94,6 +94,9 @@ src="$CCVL_MACOS_TEST_SRC"
   || refuse 'The test bundle was built from another commit than this run.'
 [[ $(jq -er '.runtime_id' "$scratch/bundle/suite.json") == "$runtime_id" ]] \
   || refuse 'The test bundle was built for another runtime identity than the executable under test.'
+# shellcheck source=.agent/scripts/macos-bundle-check.sh
+source .agent/scripts/macos-bundle-check.sh
+ccvl_bundle_complete "$scratch/bundle" || refuse 'The test bundle is not exactly what suite.json lists.'
 while IFS=' ' read -r bundled_sum bundled_path; do
   [[ $(sha256 "$scratch/bundle/$bundled_path") == "$bundled_sum" ]] \
     || refuse "$bundled_path in the test bundle differs from the file that was bundled."
