@@ -776,9 +776,9 @@ dependencies = [
 
 [[package]]
 name = "ctypst"
-version = "0.3.6"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b30dc5d836a8ad19301b3a052b129d9950cff8b76f7487a408d04387c7270f8b"
+checksum = "a5baac5fe931ef45e45f57df6f3262c3ddca0f3b560304e9386c1d380b328ba2"
 dependencies = [
  "serde",
  "serde_json",
@@ -3244,7 +3244,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

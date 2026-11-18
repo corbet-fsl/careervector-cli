@@ -28,6 +28,10 @@ path = ".agent/tests/release_evidence.rs"
 name = "private_check"
 path = ".agent/tests/private_check.rs"
 
+[[test]]
+name = "cli_commands"
+path = ".agent/tests/cli_commands.rs"
+
 [dependencies]
 anyhow = "1.0"
 ccvl-engine = { package = "ccvl", version = "0.1", features = ["render"] }

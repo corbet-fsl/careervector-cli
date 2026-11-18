@@ -213,3 +213,57 @@ fn malformed_opportunity_keys_are_rejected_before_watching() {
     assert!(crate::opportunity::record_path(&workspace, "../acme", "lead", false).is_err());
     assert!(crate::opportunity::record_path(&workspace, "acme", "lead", false).is_ok());
 }
+
+#[test]
+fn step_reports_silent_first_builds_loud_rebuilds_and_failures() {
+    let (_directory, workspace, spec) = fixture();
+    let mut state = State::new(&workspace);
+    // The first build only settles the input set and stays silent.
+    step(&mut state, &workspace, &|workspace| build(workspace, &spec));
+    assert!(state.previous.is_none());
+    // A settled rebuild reports its outputs; a failure reports and waits.
+    step(&mut state, &workspace, &|workspace| build(workspace, &spec));
+    assert!(state.previous.is_some());
+    step(
+        &mut state,
+        &workspace,
+        &|_: &Workspace| -> Result<Vec<PathBuf>> { anyhow::bail!("synthetic build failure") },
+    );
+}
+
+#[test]
+fn digest_covers_directory_inputs() {
+    let (_directory, workspace, _spec) = fixture();
+    let directory = workspace.path("watched-dir");
+    fs::create_dir(&directory).unwrap();
+    let digest = digest(
+        &workspace,
+        &BTreeSet::from([workspace.path("wording.md"), directory]),
+    );
+    assert_eq!(digest.len(), 32);
+}
+
+#[cfg(unix)]
+#[test]
+fn digest_covers_outside_links_unreadable_files_and_sockets() {
+    use std::os::unix::fs::{PermissionsExt as _, symlink};
+    use std::os::unix::net::UnixListener;
+    let (_directory, workspace, _spec) = fixture();
+    symlink(std::env::temp_dir(), workspace.path("outside")).unwrap();
+    let locked = workspace.path("locked.toml");
+    fs::write(&locked, "locked").unwrap();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+    let socket = workspace.path("watch.sock");
+    let _listener = UnixListener::bind(&socket).unwrap();
+    let digest = digest(
+        &workspace,
+        &BTreeSet::from([
+            workspace.path("wording.md"),
+            workspace.path("outside"),
+            locked,
+            socket,
+            workspace.path("missing.toml"),
+        ]),
+    );
+    assert_eq!(digest.len(), 32);
+}

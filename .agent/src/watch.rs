@@ -18,18 +18,29 @@ pub fn run(
     println!("Watching inputs for {label}. Press Ctrl-C to stop.");
     let mut state = State::new(workspace);
     loop {
-        if let Some(result) = state.poll(workspace, &build) {
-            match result {
-                Ok(outputs) if state.previous.is_some() => {
-                    for output in outputs {
-                        println!("Rendered {}", output.display());
-                    }
-                }
-                Ok(_) => {}
-                Err(error) => eprintln!("{error:#}\nWaiting for an input change."),
-            }
-        }
+        step(&mut state, workspace, &build);
         thread::sleep(Duration::from_millis(500));
+    }
+}
+
+/// One watch iteration: rebuild when an observed input changed and report the
+/// outcome. Extracted from [`run`] so tests can drive the reporting arms
+/// without the surrounding sleep loop.
+fn step(
+    state: &mut State,
+    workspace: &Workspace,
+    build: &impl Fn(&Workspace) -> Result<Vec<PathBuf>>,
+) {
+    if let Some(result) = state.poll(workspace, build) {
+        match result {
+            Ok(outputs) if state.previous.is_some() => {
+                for output in outputs {
+                    println!("Rendered {}", output.display());
+                }
+            }
+            Ok(_) => {}
+            Err(error) => eprintln!("{error:#}\nWaiting for an input change."),
+        }
     }
 }
 
