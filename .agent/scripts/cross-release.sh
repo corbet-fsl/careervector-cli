@@ -53,21 +53,38 @@ if [[ ! -d $sysroot/lib/rustlib/$triple/lib ]]; then
     echo "The Rust toolchain has no $triple standard library and cannot add one." >&2; exit 2
   fi
 fi
+# Run the build with its output kept in a log; when it fails, print the end of
+# that log on both streams, so a failed stage never exits without its error.
+build_logged() {
+  local log status=0
+  log="$(mktemp "${TMPDIR:-/tmp}/cross-build.XXXXXX")"
+  "$@" >"$log" 2>&1 || status=$?
+  cat "$log"
+  if ((status != 0)); then
+    {
+      printf 'Cross build of %s failed (exit %s); the end of its log:\n' "$platform" "$status"
+      tail -n 60 "$log"
+    } | tee /dev/stderr
+    rm -f "$log"
+    exit "$status"
+  fi
+  rm -f "$log"
+}
 if [[ $driver == zigbuild ]]; then
-  "${CCVL_CARGO_COMMAND[@]}" zigbuild --locked --release \
+  build_logged "${CCVL_CARGO_COMMAND[@]}" zigbuild --locked --release \
     --config .cargo/release-profile.toml --target "$zig_target"
   tool="cargo-zigbuild $(cargo-zigbuild --version | awk '{print $NF}'), zig $(zig version)"
 elif [[ $driver == clt ]]; then
   # The macOS clone is an x86_64 Mac: its Command Line Tools (clang, ld, the SDK) link the
   # arm64 slice of the same SDK, and the result is never run (ARM is never emulated).
   [[ $(uname -s) == Darwin ]] || { echo 'macos-arm64 is built in the macOS clone, with its Command Line Tools.' >&2; exit 2; }
-  "${CCVL_CARGO_COMMAND[@]}" build --locked --release \
+  build_logged "${CCVL_CARGO_COMMAND[@]}" build --locked --release \
     --config .cargo/release-profile.toml --target "$triple"
   clang_version="$(clang --version | sed -n '1s/.*clang version \([0-9][0-9.]*\).*/\1/p')"
   clt_version="$(pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | sed -n 's/^version: //p')" || clt_version=
   tool="Apple clang ${clang_version:-unknown}, Command Line Tools ${clt_version:-unknown}"
 else
-  "${CCVL_CARGO_COMMAND[@]}" build --locked --release \
+  build_logged "${CCVL_CARGO_COMMAND[@]}" build --locked --release \
     --config .cargo/release-profile.toml --target "$triple"
   tool="$(ccvl_llvm_mingw_identity "$triple")"
 fi
