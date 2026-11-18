@@ -8,6 +8,7 @@ path = [
   ".agent/build.rs",
   ".agent/kanban.toml",
   ".agent/release-platforms.txt",
+  ".agent/fileset-releases.txt",
   ".agent/scripts/**",
   ".agent/skills/**",
   ".agent/schemas/**",
