@@ -75,7 +75,7 @@ cv new-opportunity example-org strategy-lead
 cv build-opportunity example-org strategy-lead
 ```
 
-`cv init` refuses a non-empty directory (`--force` writes into one but never
+`cv init` ends by running `cv build` (skip with `--no-build`), so the PDFs exist at once; the renders are not tracked in the manifest. It refuses a non-empty directory (`--force` writes into one but never
 overwrites an existing file) and offers `git init` without ever committing. It is
 easier to change an existing CV than to write a first one: edit the text, keep
 what fits, delete what does not.

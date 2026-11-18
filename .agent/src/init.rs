@@ -272,7 +272,7 @@ pub fn print_report(report: &InitReport, release: &Release<'_>) {
     if report.git {
         println!("ran git init (nothing is committed)");
     }
-    println!("next: cd {} && cv build", report.root.display());
+    println!("next: cd {}", report.root.display());
 }
 
 #[cfg(test)]

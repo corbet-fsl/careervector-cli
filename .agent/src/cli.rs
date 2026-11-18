@@ -62,6 +62,9 @@ enum Command {
         /// Do not offer `git init`.
         #[arg(long)]
         no_git: bool,
+        /// Do not render the showcase documents after writing the files.
+        #[arg(long)]
+        no_build: bool,
     },
     /// Bring this workspace to the installed cv version, keeping every edit of yours.
     ///
@@ -389,6 +392,7 @@ pub fn run() -> Result<ExitCode> {
             force,
             git,
             no_git,
+            no_build,
         } => {
             let release = crate::init::Release::embedded();
             let choice = if *git {
@@ -401,7 +405,24 @@ pub fn run() -> Result<ExitCode> {
             let target = directory;
             let report = crate::init::init(target, &release, *force, choice)?;
             crate::init::print_report(&report, &release);
-            return Ok(ExitCode::SUCCESS);
+            if *no_build {
+                return Ok(ExitCode::SUCCESS);
+            }
+            // The renders are build products: they exist after init but are
+            // not in the manifest. A failed build leaves the workspace in place.
+            println!("Building the showcase documents (cv build) ...");
+            let built = Workspace::at(&report.root).and_then(|ws| render::render_cvl(&ws));
+            return Ok(match built {
+                Ok(outputs) => {
+                    println!("Rendered {} documents.", outputs.len());
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("The workspace was written, but the build failed: {error:#}");
+                    eprintln!("Run `cv build` in {} to retry.", report.root.display());
+                    ExitCode::from(3)
+                }
+            });
         }
         Command::Update { apply, .. } => {
             let start = match &args.root {

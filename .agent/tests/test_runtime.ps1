@@ -49,7 +49,7 @@ try {
     # The binary on its own: init a workspace, build the showcase from the
     # embedded files, then see that an update has nothing to do.
     $Smoke = Join-Path $Scratch "init-smoke"
-    & $TestBinary init $Smoke --no-git
+    & $TestBinary init $Smoke --no-git --no-build
     if ($LASTEXITCODE -ne 0) { throw "cv init failed" }
     Push-Location $Smoke
     try {

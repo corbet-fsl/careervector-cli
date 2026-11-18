@@ -62,7 +62,7 @@ grep -Fq 'does not match the workspace runtime' "$scratch/.agent/cache/direct.lo
 # The binary on its own, as a user installs it: init a workspace and build the
 # showcase from the embedded files, then see that an update has nothing to do.
 smoke="$scratch/init-smoke"
-"$binary" init "$smoke" --no-git >/dev/null
+"$binary" init "$smoke" --no-git --no-build >/dev/null
 (cd "$smoke" && "$binary" build >/dev/null && "$binary" update | grep -Fq 'nothing was changed')
 [[ "$("$binary" fileset-id)" == "$(sed -n 's/.*"fileset_id": "\(.*\)".*/\1/p' "$smoke/.cv/manifest.json")" ]]
 printf 'Matching binaries run; source changes are rejected by both launcher and executable.\n'

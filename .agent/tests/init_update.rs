@@ -34,7 +34,7 @@ fn text(output: &Output) -> String {
 }
 
 fn init(parent: &Path, name: &str) -> PathBuf {
-    let output = cv(parent, &["init", name, "--no-git"]);
+    let output = cv(parent, &["init", name, "--no-git", "--no-build"]);
     assert!(output.status.success(), "{}", text(&output));
     parent.join(name)
 }
@@ -46,18 +46,30 @@ fn manifest(root: &Path) -> Value {
 #[test]
 fn a_new_user_inits_and_builds_the_showcase_offline_without_tool_sources() {
     let dir = scratch();
-    let root = init(dir.path(), "my-cv");
+    let output = cv(dir.path(), &["init", "my-cv", "--no-git"]);
+    assert!(output.status.success(), "{}", text(&output));
+    let root = dir.path().join("my-cv");
+    let pdf = root.join("outputs/cvl/cv/harvard/d-plus/en/ch/pdf/cv-4.pdf");
+    assert!(pdf.is_file(), "a plain init renders the showcase");
+    let recorded = manifest(&root);
+    assert!(
+        recorded["files"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .all(|p| !p.contains("/pdf/")),
+        "renders stay out of the manifest"
+    );
+    fs::remove_dir_all(root.join("outputs/cvl/cv/harvard/d-plus/en/ch/pdf")).unwrap();
     assert!(root.join("inputs/profile.toml").is_file());
     assert!(root.join("cv.json").is_file());
     assert!(!root.join(".agent/src").exists(), "the binary is the tool");
     assert!(!root.join("Cargo.toml").exists());
     assert!(!root.join(".git").exists(), "init never starts git unasked");
+    assert!(!pdf.exists(), "--no-build style: nothing before a build");
     let build = cv(&root, &["build"]);
     assert!(build.status.success(), "{}", text(&build));
-    assert!(
-        root.join("outputs/cvl/cv/harvard/d-plus/en/ch/pdf/cv-4.pdf")
-            .is_file()
-    );
+    assert!(pdf.is_file());
 }
 
 #[test]
@@ -166,8 +178,11 @@ fn init_force_never_overwrites_an_existing_file() {
     let root = dir.path().join("keep");
     fs::create_dir_all(root.join("inputs")).unwrap();
     fs::write(root.join("inputs/profile.toml"), "mine = true\n").unwrap();
+    // The user's profile is not a valid one, so the build at the end of init
+    // fails: the workspace stays, the exit code is 3, and the file is untouched.
     let output = cv(dir.path(), &["init", "keep", "--force", "--no-git"]);
-    assert!(output.status.success(), "{}", text(&output));
+    assert_eq!(output.status.code(), Some(3), "{}", text(&output));
+    assert!(text(&output).contains("Run `cv build`"));
     assert_eq!(
         fs::read_to_string(root.join("inputs/profile.toml")).unwrap(),
         "mine = true\n"
