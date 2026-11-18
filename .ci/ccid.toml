@@ -103,3 +103,6 @@ build = ["release-build"]
 legs = { windows = "release-windows", macos = "release-macos" }
 seal = ["release-seal"]
 manifests = ["manifest.json", "runtime-manifest.json"]
+# Draft-only assets: legs fetch them like any asset, promotion deletes them before the seal and
+# SHA256SUMS. The macOS test bundle is for the macOS clone, not for users.
+scratch = ["macos-tests-*"]
