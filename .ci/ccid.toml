@@ -74,13 +74,17 @@ commands = [["bash", ".agent/scripts/release-seal.sh"]]
 # (rustc/cargo for the build arms; shellcheck/actionlint/reuse for
 # lint).
 
+[checks.portable-paths]
+kind = "commands"
+commands = [["ccid", "portable-paths", "--mode", "enforce"]]
+
 [render]
 render_schema = 3
 
 [jobs.verify]
 scheduler = "forgejo"
 runs_on = "linux"
-checks = ["rust", "documents", "lint", "styles"]
+checks = ["rust", "documents", "lint", "styles", "portable-paths"]
 workflow = "ci"
 command = ["bash", ".ci/run-cached.sh"]
 

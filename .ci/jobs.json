@@ -2,7 +2,7 @@
   "schema": 1,
   "generator": "ccid render v1",
   "tool_revision": "",
-  "manifest_sha256": "5b162fc77f73aee6805261a9be8493bdebb7a416f64fe0b6296317d635f5b4b5",
+  "manifest_sha256": "099ec81be055503da63634448127f8bd74cee08a3343ba753eaacc4481ea2451",
   "jobs": {
     "downstream-check": {
       "job": "downstream-check",
@@ -87,7 +87,8 @@
         "rust",
         "documents",
         "lint",
-        "styles"
+        "styles",
+        "portable-paths"
       ],
       "workflow": "ci",
       "command": [
