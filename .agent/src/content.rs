@@ -24,7 +24,7 @@ pub fn read_record(workspace: &Workspace, path: impl AsRef<Path>) -> Result<Valu
         .context("wording.source must be a path string")?;
     ensure!(
         path.file_name().is_some_and(|name| name == "content.toml")
-            && !path.starts_with(workspace.path("opportunities")),
+            && !workspace.is_under(&workspace.path("opportunities"), &path),
         "wording references are allowed only in registered showcase content.toml leaves; private opportunities must be self-contained"
     );
     let leaf = path.parent().context("wording record has no parent")?;
@@ -97,7 +97,11 @@ pub fn read_record(workspace: &Workspace, path: impl AsRef<Path>) -> Result<Valu
 
 fn validate_owner(workspace: &Workspace, path: &Path, document: &str) -> Result<()> {
     let root = styles::root(workspace, document)?;
-    let relative = path.strip_prefix(&root).context(
+    // Both as workspace-relative paths: above 260 characters a resolved path keeps its Windows
+    // `\\?\` prefix while the shorter root does not, and a plain `strip_prefix` finds no prefix.
+    let relative_root = workspace.relative(&root)?;
+    let relative = workspace.relative(path)?;
+    let relative = relative.strip_prefix(&relative_root).map(Path::to_path_buf).ok().context(
         "shared wording table must match its owning document root; private opportunities must be self-contained"
     )?;
     let parts = relative

@@ -139,24 +139,38 @@ fn a_fork_style_checkout_without_a_manifest_is_adopted_and_keeps_its_edit() {
     assert!(after["files"].get("inputs/profile.toml").is_none());
 }
 
-/// A root of 200+ characters: the deepest shipped files are over 260 characters long, where
-/// Windows keeps the `\\?\` prefix on a resolved path while the shorter root loses it. Update and
-/// a render must still see those files as inside the workspace.
+/// A root of 230+ characters: the shipped files below it are over 260 characters long, where
+/// Windows keeps the `\\?\` prefix on a resolved path while the shorter root loses it. Init,
+/// update and a render must still see those files as inside the workspace. The commands run from
+/// a short directory (a process can not start in a long one) and name the workspace with `--root`.
 #[test]
 fn a_workspace_under_a_long_root_updates_and_renders() {
     let dir = scratch();
     let mut parent = dir.path().to_path_buf();
-    while parent.as_os_str().len() < 220 {
-        parent.push("long-directory-name-0123456789");
+    // The workspace root itself stays under 260 characters (Windows drops the verbatim prefix
+    // from it), while the deepest shipped files below it are over 260 (it stays on theirs).
+    while parent.as_os_str().len() < 230 {
+        parent.push("segment-0");
     }
     fs::create_dir_all(&parent).unwrap();
-    let root = init(&parent, "ws");
-    let update = cv(&root, &["update", "--apply"]);
+    let root = parent.join("ws");
+    assert!(
+        root.as_os_str().len() < 255,
+        "the root must stay a plain path: {}",
+        root.display()
+    );
+    let short = dir.path();
+    let root_text = root.to_str().unwrap();
+    let created = cv(short, &["init", root_text, "--no-git", "--no-build"]);
+    assert!(created.status.success(), "{}", text(&created));
+    let update = cv(short, &["--root", root_text, "update", "--apply"]);
     assert!(update.status.success(), "{}", text(&update));
     assert!(!text(&update).contains("outside"), "{}", text(&update));
     let build = cv(
-        &root,
+        short,
         &[
+            "--root",
+            root_text,
             "build-cv",
             "en-ch",
             "4",
@@ -167,7 +181,7 @@ fn a_workspace_under_a_long_root_updates_and_renders() {
         ],
     );
     assert!(build.status.success(), "{}", text(&build));
-    let check = cv(&root, &["list-styles"]);
+    let check = cv(short, &["--root", root_text, "list-styles"]);
     assert!(check.status.success(), "{}", text(&check));
 }
 
