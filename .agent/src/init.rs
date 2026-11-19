@@ -132,7 +132,11 @@ pub fn schema_of(bytes: &[u8]) -> Option<u64> {
 /// A manifest path must stay inside the workspace: plain relative components.
 pub fn safe_relative(path: &str) -> Result<PathBuf> {
     let relative = Path::new(path);
+    // Keys are `/`-separated on every platform. A backslash is a separator only to Windows, so
+    // it is refused in the raw string, before it is parsed as a path: `a\b` would otherwise be
+    // two components there and one odd file name elsewhere.
     if path.is_empty()
+        || path.contains('\\')
         || relative
             .components()
             .any(|component| !matches!(component, Component::Normal(_)))

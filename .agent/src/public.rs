@@ -318,7 +318,8 @@ fn left_out_of_workspace(workspace: &Workspace, candidate: &Path) -> bool {
         return false;
     }
     let mut parts: Vec<String> = Vec::new();
-    let Ok(relative) = candidate.strip_prefix(workspace.root()) else {
+    // Either spelling of the root (a long path keeps its Windows prefix).
+    let Ok(relative) = workspace.relative(candidate) else {
         return false;
     };
     for component in relative.components() {
