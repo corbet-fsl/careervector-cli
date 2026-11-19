@@ -52,3 +52,15 @@ ccvl_macos_sdk_identity() {
   fi
   printf 'macOS SDK %s (%s)\n' "${version:-unknown}" "$(basename -- "$SDKROOT")"
 }
+
+# ccvl_macho_arch FILE: x86_64, arm64 or "unknown", from the Mach-O header itself (the 64-bit
+# little-endian magic cf fa ed fe, then the CPU type), so no `file` binary is needed on the runner.
+ccvl_macho_arch() {
+  local header
+  header="$(od -An -tx1 -N8 -- "$1" 2>/dev/null | tr -d ' \n')"
+  case "$header" in
+    cffaedfe07000001) echo x86_64 ;;
+    cffaedfe0c000001) echo arm64 ;;
+    *) echo unknown ;;
+  esac
+}

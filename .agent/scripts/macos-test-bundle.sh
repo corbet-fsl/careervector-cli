@@ -24,7 +24,7 @@ cd "$repo_root"
 output="${1:?Usage: macos-test-bundle.sh OUTPUT}"
 triple=x86_64-apple-darwin
 [[ -z ${GH_TOKEN:-} ]] || { echo 'Publication credentials must not reach the macOS test build.' >&2; exit 2; }
-for tool in cargo-zigbuild zig jq tar file; do
+for tool in cargo-zigbuild zig jq tar od; do
   command -v "$tool" >/dev/null || { echo "Missing cross toolchain: $tool" >&2; exit 2; }
 done
 # shellcheck source=.agent/scripts/macos-sdk-env.sh
@@ -70,11 +70,7 @@ jq -r 'select(.reason == "compiler-artifact" and .profile.test == false and .tar
 [[ $(wc -l <"$scratch/cv.txt") -eq 1 ]] || { echo 'The build did not produce exactly one cv binary for the tests.' >&2; exit 2; }
 names=()
 while IFS= read -r test_exe; do
-  kind="$(file -b "$test_exe")"
-  case "$kind" in
-    *Mach-O*x86_64*) ;;
-    *) echo "$test_exe is not an x86_64 Mach-O executable: $kind" >&2; exit 2 ;;
-  esac
+  [[ $(ccvl_macho_arch "$test_exe") == x86_64 ]] || { echo "$test_exe is not an x86_64 Mach-O executable." | tee /dev/stderr; exit 2; }
   cp -- "$test_exe" "$bundle/tests/$(basename -- "$test_exe")"
   names+=("$(basename -- "$test_exe")")
 done <"$scratch/tests.txt"

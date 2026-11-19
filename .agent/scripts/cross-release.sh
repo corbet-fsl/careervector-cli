@@ -6,7 +6,10 @@
 # no Microsoft SDK, free licences). The result is built, never run here: ARM64 has no
 # native executor and is never emulated, and the Windows x86_64 executable is run
 # later, as this very file, in its Windows clone (.agent/scripts/windows-test.sh).
-set -euo pipefail
+set -Eeuo pipefail
+# Whatever fails here says so, with its line and command, on stdout as well: the job log of the
+# release run drops the standard error of a failing step, and a silent exit 1 cost a run (105).
+trap 'printf "cross-release.sh (%s): line %s: %s exited %s\n" "${platform:-?}" "$LINENO" "$BASH_COMMAND" "$?"' ERR
 repo_root="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 platform="${1:?Usage: cross-release.sh PLATFORM OUTPUT}"
@@ -86,11 +89,11 @@ else
 fi
 binary="${CARGO_TARGET_DIR:-$repo_root/target}/$triple/release/$exe"
 if [[ $driver == zigbuild-apple ]]; then
-  # Never run here; at least say what it is. `file` names the Mach-O architecture.
-  kind="$(file -b "$binary")"
-  case "$platform:$kind" in
-    macos-x86_64:*Mach-O*x86_64*|macos-arm64:*Mach-O*arm64*) ;;
-    *) echo "$binary is not the Mach-O executable of $platform: $kind" >&2; exit 2 ;;
+  # Never run here; at least say what it is: the Mach-O header names the architecture.
+  arch="$(ccvl_macho_arch "$binary")"
+  case "$platform:$arch" in
+    macos-x86_64:x86_64|macos-arm64:arm64) ;;
+    *) echo "$binary is not the Mach-O executable of $platform (header says: $arch)." | tee /dev/stderr; exit 2 ;;
   esac
 fi
 if [[ $driver == llvm-mingw ]]; then
@@ -109,8 +112,17 @@ if [[ -x "$output/cv-linux-x86_64" ]]; then export CCVL_RELEASE_EVIDENCE_BIN="$o
 # shellcheck source=.agent/scripts/release-evidence.sh
 source .agent/scripts/release-evidence.sh
 ccvl_prepare_release_evidence
+evidence_log="$(mktemp "${TMPDIR:-/tmp}/cross-evidence.XXXXXX")"
+evidence_status=0
 "${CCVL_RELEASE_EVIDENCE_COMMAND[@]}" cross \
   --platform "$platform" --binary "$binary" --host "$triple" \
   --rustc "$("${CCVL_RUSTC_COMMAND[@]}" --version)" \
   --cargo "$("${CCVL_CARGO_COMMAND[@]}" --version)" \
-  --tool "$tool" --output "$output"
+  --tool "$tool" --output "$output" 2>"$evidence_log" || evidence_status=$?
+cat "$evidence_log" >&2
+if ((evidence_status != 0)); then
+  printf 'release-evidence cross for %s failed (exit %s): %s\n' "$platform" "$evidence_status" "$(tr '\n' ' ' <"$evidence_log")"
+  rm -f "$evidence_log"
+  exit "$evidence_status"
+fi
+rm -f "$evidence_log"

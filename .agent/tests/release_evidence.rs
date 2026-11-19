@@ -2001,3 +2001,58 @@ mod bundle_check {
         assert!(text(&result).contains("tests/link"), "{}", text(&result));
     }
 }
+
+/// Release run 105 died with a silent `exit 1` after the macos-x86_64 build. The post-build
+/// path of the cross stage no longer needs a `file` binary (the Mach-O header is read with
+/// `od`), and any failure in it says what failed, on stdout.
+#[test]
+fn the_macho_architecture_is_read_from_the_header() {
+    let temp = tempfile::tempdir().unwrap();
+    let cases: [(&str, &[u8], &str); 5] = [
+        (
+            "x86_64",
+            &[0xcf, 0xfa, 0xed, 0xfe, 0x07, 0x00, 0x00, 0x01, 0, 0],
+            "x86_64",
+        ),
+        (
+            "arm64",
+            &[0xcf, 0xfa, 0xed, 0xfe, 0x0c, 0x00, 0x00, 0x01, 0, 0],
+            "arm64",
+        ),
+        ("elf", b"\x7fELF\x02\x01\x01\x00\x00\x00", "unknown"),
+        ("short", &[0xcf, 0xfa], "unknown"),
+        ("empty", &[], "unknown"),
+    ];
+    for (name, bytes, expected) in cases {
+        let path = temp.path().join(name);
+        fs::write(&path, bytes).unwrap();
+        let output = Command::new("bash")
+            .args([
+                "-c",
+                "source \"$1/.agent/scripts/macos-sdk-env.sh\"; ccvl_macho_arch \"$2\"",
+                "bash",
+            ])
+            .arg(repository())
+            .arg(&path)
+            .output()
+            .unwrap();
+        assert_eq!(text(&output).trim(), expected, "{name}");
+    }
+}
+
+#[test]
+fn the_cross_stage_reports_every_failure_on_stdout() {
+    let script = fs::read_to_string(repository().join(".agent/scripts/cross-release.sh")).unwrap();
+    assert!(
+        script.contains("set -Eeuo pipefail") && script.contains("trap 'printf"),
+        "an ERR trap must name the failing line and command"
+    );
+    assert!(
+        script.contains("release-evidence cross for"),
+        "a failing evidence command must be reported with its reason"
+    );
+    assert!(
+        !script.contains("file -b"),
+        "the runner may have no `file`: read the header instead"
+    );
+}
