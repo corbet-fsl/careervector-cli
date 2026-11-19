@@ -44,7 +44,8 @@ for check in "$@"; do
       source .agent/scripts/existing-tool-path.sh
       ccvl_use_existing_lint_tools
       shellcheck .agent/scripts/*.sh .agent/tests/*.sh cv
-      reuse lint
+      # The project root is this folder, wherever the repository root is.
+      reuse --root "$PWD" lint
       bash .agent/tests/test_bootstrap.sh
       bash .agent/tests/test_ci_toolchain.sh
       bash .agent/tests/test_lfs_fetch.sh
