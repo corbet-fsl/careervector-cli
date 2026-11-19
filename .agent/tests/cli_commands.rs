@@ -1863,7 +1863,12 @@ fn keys_at_the_budget_build_and_every_generated_path_fits() {
 #[test]
 fn existing_opportunities_with_old_style_keys_still_build() {
     let (_temp, root) = copy_workspace("ccvl-cli-old-keys-");
-    for (index, old_key) in ["con", &"x".repeat(60)].into_iter().enumerate() {
+    // A directory named `con` can not exist on Windows (a device name): that case is Unix-only.
+    let mut old_keys = vec!["x".repeat(60)];
+    if !cfg!(windows) {
+        old_keys.insert(0, "con".to_owned());
+    }
+    for (index, old_key) in old_keys.iter().map(String::as_str).enumerate() {
         let position = format!("lead-{index}");
         let created = run(
             &root,
