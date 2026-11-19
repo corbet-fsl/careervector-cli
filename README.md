@@ -183,6 +183,29 @@ The checked-in showcase is visual and implementation evidence, never evidence
 about another user. Claims may be selected and compressed from that user's own
 evidence, but must never be invented.
 
+## Names that work everywhere
+
+Your workspace may travel between Linux, macOS and Windows, through Git, a shell and a URL.
+cv therefore refuses to create, and warns about, names that cause trouble somewhere:
+
+- the characters `/ \ : * ? " < > |` and control characters; `.` and `..`; a name that
+  starts or ends with a space or ends with a dot; Windows device names such as `CON`, `NUL`,
+  `COM1` or `LPT1`, with or without an extension (`con.txt`; `console.toml` is fine);
+- a name longer than 255 bytes, or a workspace-relative path longer than 200 characters (so a
+  workspace root of up to 60 characters stays under Windows' 260);
+- two names in one folder that differ only in capitalisation (or in Unicode form), because
+  Windows and macOS treat them as one file.
+
+The organisation and position keys of a new opportunity, and the names cv generates, are
+lowercase letters, digits, `.`, `_` and `-` (at most 48 characters, and short enough that
+every file cv generates for the opportunity stays within the 200-character limit); a refused
+key comes with a valid suggestion. Opportunities that already exist keep working whatever
+their keys.
+
+`cv check` looks at your own files under `inputs/` and `opportunities/` and **warns** about
+every name or path that would cause trouble, with a suggested fix. It never fails on them and
+never renames, moves or deletes anything: renaming is yours to do.
+
 ## Agent workflows
 
 Canonical skills live under `.agent/skills/`:
