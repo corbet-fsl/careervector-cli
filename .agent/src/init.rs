@@ -142,11 +142,51 @@ pub fn safe_relative(path: &str) -> Result<PathBuf> {
     Ok(relative.to_path_buf())
 }
 
+/// The text of an absolute Windows path in the verbatim form (`\\?\C:\...`, `\\?\UNC\...`),
+/// which the file system takes above `MAX_PATH` (260 characters). Anything else is returned as
+/// it is: a path that is already verbatim, a relative path, one with `.` or `..` segments
+/// (the verbatim form does not normalise them) and a Unix path.
+#[must_use]
+#[cfg_attr(not(windows), allow(dead_code))] // pure text logic, tested everywhere, used on Windows
+pub(crate) fn verbatim_text(path: &str) -> String {
+    if path.starts_with(r"\\?\") {
+        return path.to_owned();
+    }
+    let normal = path.replace('/', "\\");
+    if normal.split('\\').any(|part| part == "." || part == "..") {
+        return path.to_owned();
+    }
+    if let Some(rest) = normal.strip_prefix(r"\\") {
+        return format!(r"\\?\UNC\{rest}");
+    }
+    let drive = normal.as_bytes();
+    if drive.len() >= 3 && drive[0].is_ascii_alphabetic() && drive[1] == b':' && drive[2] == b'\\' {
+        return format!(r"\\?\{normal}");
+    }
+    path.to_owned()
+}
+
+/// The form of `path` to hand to file-system calls. On Windows a long path only works in
+/// the verbatim form (unless the machine enables long paths); elsewhere it is unchanged.
+#[must_use]
+pub(crate) fn io_path(path: &Path) -> PathBuf {
+    #[cfg(windows)]
+    {
+        PathBuf::from(verbatim_text(&path.to_string_lossy()))
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_path_buf()
+    }
+}
+
 /// Write through a fresh, exclusively created temporary file in the same
 /// directory and an atomic rename, so a crash never leaves a half-written file
 /// and no existing path (a planted link, a user's file) is ever written through.
 pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
     use std::io::Write as _;
+    let path = io_path(path);
+    let path = path.as_path();
     let parent = path.parent().context("a path without a parent")?;
     fs::create_dir_all(parent).with_context(|| format!("cannot create {}", parent.display()))?;
     let mut temporary = tempfile::NamedTempFile::new_in(parent)
@@ -175,6 +215,10 @@ pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
 /// is refused by name and nothing is changed.
 pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
     let relative_path = safe_relative(relative)?;
+    // Every file-system operation below, and by whoever gets the result, uses the form that
+    // Windows accepts above 260 characters (`io_path`); display keeps the plain names.
+    let root = io_path(root);
+    let root = root.as_path();
     let mut current = root.to_path_buf();
     for component in relative_path.components() {
         current.push(component);
@@ -192,7 +236,12 @@ pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
             }
         }
     }
-    let target = root.join(&relative_path);
+    // Component by component: in a verbatim path a `/` is not a separator, so a joined
+    // relative path with slashes would name a file that does not exist.
+    let mut target = root.to_path_buf();
+    for component in relative_path.components() {
+        target.push(component);
+    }
     let mut ancestor = target.parent();
     while let Some(directory) = ancestor {
         if directory.exists() {
@@ -235,7 +284,7 @@ pub struct InitReport {
 /// is ever overwritten. An existing file that already equals the shipped one is
 /// recorded; one that differs stays the user's and is listed.
 pub fn init(target: &Path, release: &Release<'_>, force: bool, git: Git) -> Result<InitReport> {
-    if target.join(MANIFEST).is_file() {
+    if target.exists() && safe_path(target, MANIFEST)?.is_file() {
         bail!(
             "{} is already a cv workspace; run `cv update` to bring it to this version",
             target.display()
@@ -296,7 +345,7 @@ fn directory_is_empty(directory: &Path) -> Result<bool> {
 }
 
 fn maybe_git_init(root: &Path, git: Git) -> Result<bool> {
-    if root.join(".git").exists() {
+    if io_path(&root.join(".git")).exists() {
         return Ok(false);
     }
     let wanted = match git {
@@ -457,6 +506,57 @@ mod tests {
         assert_eq!(
             on_disk, embedded,
             "rebuild: the embedded set drifted from the tree"
+        );
+    }
+}
+
+#[cfg(test)]
+mod verbatim_tests {
+    use super::verbatim_text;
+
+    #[test]
+    fn a_long_drive_path_is_given_to_the_file_system_in_verbatim_form() {
+        let long = format!(
+            r"C:\Windows\SystemTemp\cv\{}\file.toml",
+            "long-directory-name-0123456789\\".repeat(10)
+        );
+        assert!(long.len() > 260);
+        let verbatim = verbatim_text(&long);
+        assert_eq!(verbatim, format!(r"\\?\{long}"));
+        // Forward slashes (from an opportunity key or a manifest path) become backslashes.
+        assert_eq!(verbatim_text("C:/a/b/c.toml"), r"\\?\C:\a\b\c.toml");
+        assert_eq!(verbatim_text(r"C:\a/b\c.toml"), r"\\?\C:\a\b\c.toml");
+    }
+
+    #[test]
+    fn unc_verbatim_relative_dotted_and_unix_paths_are_not_mangled() {
+        assert_eq!(
+            verbatim_text(r"\\server\share\dir\f"),
+            r"\\?\UNC\server\share\dir\f"
+        );
+        assert_eq!(
+            verbatim_text(r"\\?\C:\already\verbatim"),
+            r"\\?\C:\already\verbatim"
+        );
+        assert_eq!(verbatim_text(r"\\?\UNC\s\sh\f"), r"\\?\UNC\s\sh\f");
+        assert_eq!(verbatim_text(r"relative\path"), r"relative\path");
+        assert_eq!(verbatim_text(r"C:drive-relative"), r"C:drive-relative");
+        assert_eq!(verbatim_text(r"C:\a\..\b"), r"C:\a\..\b");
+        assert_eq!(verbatim_text("/home/user/work"), "/home/user/work");
+    }
+
+    #[test]
+    fn on_this_platform_the_io_form_of_a_unix_path_is_the_path() {
+        #[cfg(not(windows))]
+        assert_eq!(
+            super::io_path(std::path::Path::new("/tmp/x/y")),
+            std::path::PathBuf::from("/tmp/x/y")
+        );
+        #[cfg(windows)]
+        assert!(
+            super::io_path(std::path::Path::new(r"C:\tmp\x"))
+                .to_string_lossy()
+                .starts_with(r"\\?\")
         );
     }
 }

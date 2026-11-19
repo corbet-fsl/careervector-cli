@@ -14,7 +14,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::fileset_source::sha256_hex;
 use crate::init::{
-    MANIFEST, MANIFEST_VERSION, Manifest, Release, safe_path, schema_of, write_file,
+    MANIFEST, MANIFEST_VERSION, Manifest, Release, io_path, safe_path, schema_of, write_file,
 };
 
 /// Suffix of the new version placed beside a file the user changed.
@@ -114,7 +114,7 @@ pub fn find_workspace(start: &Path) -> Result<PathBuf> {
 }
 
 fn workspace_schema(root: &Path) -> Result<u64> {
-    let bytes = fs::read(root.join("cv.json")).context("cannot read cv.json")?;
+    let bytes = fs::read(io_path(&root.join("cv.json"))).context("cannot read cv.json")?;
     schema_of(&bytes).context("cv.json has no schema_version")
 }
 
@@ -318,7 +318,7 @@ pub fn apply(
         migrated.push(step.name);
     }
     if workspace_schema(root)? < release.schema {
-        set_schema(&root.join("cv.json"), release.schema)?;
+        set_schema(&io_path(&root.join("cv.json")), release.schema)?;
     }
     // A migration that rewrites an untouched file must not make it look edited.
     for path in untouched {
@@ -387,9 +387,11 @@ fn remove_if_present(path: &Path) -> Result<()> {
 }
 
 fn remove_empty_parents(root: &Path, file: &Path) {
+    // `file` comes from safe_path in the I/O form; compare with the root in the same form.
+    let root = io_path(root);
     let mut directory = file.parent();
     while let Some(current) = directory {
-        if current == root || fs::remove_dir(current).is_err() {
+        if current == root.as_path() || fs::remove_dir(current).is_err() {
             break;
         }
         directory = current.parent();
