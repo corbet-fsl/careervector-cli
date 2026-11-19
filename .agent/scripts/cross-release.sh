@@ -65,7 +65,8 @@ fi
 build_logged() {
   local log status=0
   log="$(mktemp "${TMPDIR:-/tmp}/cross-build.XXXXXX")"
-  "$@" >"$log" 2>&1 || status=$?
+  # Run in build_cwd when one is set, else here.
+  (cd "${build_cwd:-$PWD}" && "$@") >"$log" 2>&1 || status=$?
   cat "$log"
   if ((status != 0)); then
     {
@@ -78,8 +79,18 @@ build_logged() {
   rm -f "$log"
 }
 if [[ $driver == zigbuild || $driver == zigbuild-apple ]]; then
+  # The linker probes of the zig toolchain write files (a.o) into their working directory when
+  # no output is named (release run 109 found `a.o` in the checkout). The build runs in a fresh
+  # scratch directory instead, with the manifest named by path, so a stray file cannot dirty
+  # the source tree the evidence verifies.
+  build_cwd="$(mktemp -d "${TMPDIR:-/tmp}/cross-cwd.XXXXXX")"
   build_logged "${CCVL_CARGO_COMMAND[@]}" zigbuild --locked --release \
-    --config .cargo/release-profile.toml --target "$zig_target"
+    --manifest-path "$repo_root/Cargo.toml" --config "$repo_root/.cargo/release-profile.toml" --target "$zig_target"
+  if [[ -n "$(ls -A "$build_cwd")" ]]; then
+    printf 'cross-release.sh (%s): the build left files in its working directory (kept out of the checkout): %s\n' "$platform" "$(find "$build_cwd" -mindepth 1 -maxdepth 1 -exec basename {} + | tr "\n" " ")"
+  fi
+  find "$build_cwd" -delete
+  unset build_cwd
   tool="cargo-zigbuild $(cargo-zigbuild --version | awk '{print $NF}'), zig $(zig version)"
   if [[ $driver == zigbuild-apple ]]; then tool="$tool, $(ccvl_macos_sdk_identity)"; fi
 else

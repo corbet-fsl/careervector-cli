@@ -2059,3 +2059,34 @@ fn the_cross_stage_reports_every_failure_on_stdout() {
         "the runner may have no `file`: read the header instead"
     );
 }
+
+/// Release run 109 found `a.o` in the checkout after the macos-x86_64 build: a tool of the zig
+/// toolchain wrote it into its working directory. The darwin builds therefore run in a scratch
+/// directory, the manifest named by path.
+#[test]
+fn the_zigbuild_builds_run_outside_the_checkout() {
+    for (script, call) in [
+        (
+            ".agent/scripts/cross-release.sh",
+            "zigbuild --locked --release",
+        ),
+        (
+            ".agent/scripts/macos-test-bundle.sh",
+            "zigbuild --locked --workspace",
+        ),
+    ] {
+        let text = fs::read_to_string(repository().join(script)).unwrap();
+        let at = text
+            .find(call)
+            .unwrap_or_else(|| panic!("{script} has no {call}"));
+        let window = &text[at..(at + 400).min(text.len())];
+        assert!(
+            window.contains("--manifest-path"),
+            "{script}: the manifest must be named by path"
+        );
+        assert!(
+            text.contains("build_cwd") || text.contains("cd \"$build_cwd\""),
+            "{script}: the build needs its own working directory"
+        );
+    }
+}

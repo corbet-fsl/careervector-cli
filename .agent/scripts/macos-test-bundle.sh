@@ -49,8 +49,15 @@ git ls-files -z | tar --null -T - -cf - | tar -xf - -C "$src"
 build_json="$scratch/build.json"
 started=$SECONDS
 status=0
-(cd "$src" && "${CCVL_CARGO_COMMAND[@]}" zigbuild --locked --workspace --all-features --tests --bins \
-  --target "$triple" --message-format=json-render-diagnostics) >"$build_json" 2>"$scratch/build.err" || status=$?
+# Run in a scratch directory, the manifest named by path: a stray file of the zig toolchain
+# (release run 109: a.o) must land neither in the checkout nor in the copy the tests will see.
+build_cwd="$scratch/cwd"
+mkdir -p "$build_cwd"
+(cd "$build_cwd" && "${CCVL_CARGO_COMMAND[@]}" zigbuild --locked --workspace --all-features --tests --bins \
+  --manifest-path "$src/Cargo.toml" --target "$triple" --message-format=json-render-diagnostics) >"$build_json" 2>"$scratch/build.err" || status=$?
+if [[ -n "$(ls -A "$build_cwd")" ]]; then
+  printf 'macos-test-bundle.sh: the build left files in its working directory (kept out of the tree): %s\n' "$(find "$build_cwd" -mindepth 1 -maxdepth 1 -exec basename {} + | tr "\n" " ")"
+fi
 if ((status != 0)); then
   {
     printf 'Building the macOS test executables failed (exit %s); the end of its log:\n' "$status"
