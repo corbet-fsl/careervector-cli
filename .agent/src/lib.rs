@@ -21,6 +21,7 @@ pub mod opportunity;
 pub mod ownership;
 pub mod paper;
 pub mod pdf;
+pub mod portable;
 pub mod private_check;
 pub mod public;
 pub mod release_evidence;

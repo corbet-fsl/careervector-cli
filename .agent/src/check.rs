@@ -40,6 +40,9 @@ pub fn run_selected(
         );
     }
     validate_manifest(workspace)?;
+    for finding in crate::portable::workspace_name_findings(workspace)? {
+        println!("WARN {finding}");
+    }
     validate_styles(workspace)?;
     validate_frozen_contracts(workspace)?;
     validate_measurement_ownership(workspace)?;

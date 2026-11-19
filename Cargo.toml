@@ -54,6 +54,7 @@ toml = "1.1"
 ureq = { version = "3.1", default-features = false, features = ["json", "rustls"] }
 walkdir = "2.5"
 dunce = "1.0"
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "1.4"

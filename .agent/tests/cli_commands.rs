@@ -1804,3 +1804,100 @@ fn archive_dumps_sorts_keys_and_indents() {
     let indented = archive::dumps(&value, Some(2));
     assert!(indented.contains("\n  \"a\""), "{indented}");
 }
+
+/// Keys at the budget: every path cv generates for the opportunity stays within 200
+/// characters, so `cv check`'s name rule has nothing to say about cv's own output.
+#[test]
+fn keys_at_the_budget_build_and_every_generated_path_fits() {
+    use careervector_cli::portable::{MAX_PATH_CHARS, path_problem, workspace_name_findings};
+    let (_temp, root) = copy_workspace("ccvl-cli-budget-");
+    // The profile's last name is "Corbet" (6 characters): 37 + 38 fills the budget.
+    let (organisation, position) = ("o".repeat(37), "p".repeat(38));
+    let created = run(
+        &root,
+        &[
+            "new-opportunity",
+            "--no-cover-letter",
+            &organisation,
+            &position,
+        ],
+    );
+    assert_eq!(created.status.code(), Some(0), "{}", stderr_text(&created));
+    fill_opportunity_record(&root, &organisation, &position, false);
+    let built = run(&root, &["build-opportunity", &organisation, &position]);
+    assert_eq!(built.status.code(), Some(0), "{}", stderr_text(&built));
+    let base = root.join(format!("opportunities/{organisation}/{position}"));
+    let mut longest = 0;
+    for entry in walkdir::WalkDir::new(&base) {
+        let entry = entry.unwrap();
+        let relative = same_path_text(&entry.path().strip_prefix(&root).unwrap().to_string_lossy());
+        assert_eq!(path_problem(&relative), None, "{relative}");
+        longest = longest.max(relative.chars().count());
+    }
+    assert!(longest <= MAX_PATH_CHARS && longest > 150, "{longest}");
+    let workspace = Workspace::at(&root).unwrap();
+    assert_eq!(
+        workspace_name_findings(&workspace).unwrap(),
+        Vec::<String>::new()
+    );
+    // One more character on a key is refused at creation, with the amount to cut.
+    let refused = run(
+        &root,
+        &["new-opportunity", &organisation, &format!("{position}pp")],
+    );
+    assert_eq!(refused.status.code(), Some(1));
+    assert!(
+        stderr_text(&refused).contains("too long"),
+        "{}",
+        stderr_text(&refused)
+    );
+    assert!(
+        !root
+            .join(format!("opportunities/{organisation}/{position}pp"))
+            .exists()
+    );
+}
+
+/// Only NEW opportunities are held to the portable-name policy: one that exists with an
+/// over-long key, or a key such as `con` that Windows reserves, keeps building.
+#[test]
+fn existing_opportunities_with_old_style_keys_still_build() {
+    let (_temp, root) = copy_workspace("ccvl-cli-old-keys-");
+    for (index, old_key) in ["con", &"x".repeat(60)].into_iter().enumerate() {
+        let position = format!("lead-{index}");
+        let created = run(
+            &root,
+            &["new-opportunity", "--no-cover-letter", "acme", &position],
+        );
+        assert_eq!(created.status.code(), Some(0), "{}", stderr_text(&created));
+        fill_opportunity_record(&root, "acme", &position, false);
+        // Make it an "old" opportunity: the organisation key a newer cv would refuse to create.
+        let old = root.join(format!("opportunities/{old_key}"));
+        fs::create_dir_all(&old).unwrap();
+        fs::rename(
+            root.join(format!("opportunities/acme/{position}")),
+            old.join(&position),
+        )
+        .unwrap();
+        let record = old.join(&position).join("application.toml");
+        let text = fs::read_to_string(&record).unwrap();
+        fs::write(
+            &record,
+            text.replace(
+                &format!("acme--{position}"),
+                &format!("{old_key}--{position}"),
+            ),
+        )
+        .unwrap();
+        let built = run(&root, &["build-opportunity", old_key, &position]);
+        assert_eq!(
+            built.status.code(),
+            Some(0),
+            "{old_key}: {}",
+            stderr_text(&built)
+        );
+        // Creating one with that key is refused.
+        let refused = run(&root, &["new-opportunity", old_key, "another"]);
+        assert_eq!(refused.status.code(), Some(1), "{old_key}");
+    }
+}

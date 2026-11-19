@@ -348,6 +348,7 @@ dependencies = [
  "sha2 0.10.9",
  "tempfile",
  "toml 1.2.1+spec-1.1.0",
+ "unicode-normalization",
  "ureq",
  "walkdir",
 ]

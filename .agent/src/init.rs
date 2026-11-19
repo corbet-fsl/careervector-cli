@@ -143,38 +143,10 @@ pub fn safe_relative(path: &str) -> Result<PathBuf> {
     {
         bail!("unsafe path in the cv manifest: {path:?}");
     }
-    for component in relative.components() {
-        let name = component.as_os_str().to_str().unwrap_or("\u{fffd}");
-        if let Some(reason) = unportable(name) {
-            bail!("unsafe path in the cv manifest: {path:?}: {name:?} {reason}");
-        }
+    if let Some(problem) = crate::portable::path_problem(path) {
+        bail!("unsafe path in the cv manifest: {path:?}: {problem}");
     }
     Ok(relative.to_path_buf())
-}
-
-/// Why a file name could not be kept on every platform cv runs on, if it could not. In a
-/// verbatim Windows path these names are literal, not escapes, so they would be created as
-/// they are; they would then be unusable for Explorer, other tools and a checkout on Windows.
-fn unportable(name: &str) -> Option<&'static str> {
-    if name
-        .chars()
-        .any(|c| c.is_control() || "<>:\"|?*\\".contains(c))
-    {
-        return Some("holds a character that is not allowed in a Windows file name");
-    }
-    if name.ends_with('.') || name.ends_with(' ') {
-        return Some("ends with a dot or a space");
-    }
-    let stem = name
-        .split('.')
-        .next()
-        .unwrap_or_default()
-        .to_ascii_uppercase();
-    let reserved = ["CON", "PRN", "AUX", "NUL"].contains(&stem.as_str())
-        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
-            && stem.len() == 4
-            && stem.as_bytes()[3].is_ascii_digit());
-    reserved.then_some("is a reserved Windows device name")
 }
 
 /// The text of an absolute Windows path in the verbatim form (`\\?\C:\...`, `\\?\UNC\...`),

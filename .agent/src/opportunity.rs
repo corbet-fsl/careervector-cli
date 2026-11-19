@@ -15,7 +15,10 @@ pub fn record_path(
     let pattern = Regex::new(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")?;
     for (label, value) in [("organisation", organisation), ("position", position)] {
         if !pattern.is_match(value) {
-            bail!("invalid {label} key: {value:?}");
+            bail!(
+                "invalid {label} key: {value:?}. Use lowercase letters and digits, joined by '-' or '_'. A valid one: {:?}",
+                crate::portable::suggest_key(value)
+            );
         }
     }
     let record = workspace.path(format!(
@@ -100,6 +103,18 @@ pub fn create_record(
     cover_letter: bool,
 ) -> Result<PathBuf> {
     let destination = record_path(workspace, organisation, position, false)?;
+    // Only a NEW opportunity is held to the portable-name policy; existing ones keep working.
+    let last_name = workspace
+        .read_toml_value(crate::layout::INPUTS_PROFILE)
+        .ok()
+        .and_then(|profile| {
+            profile
+                .get("name")
+                .and_then(serde_json::Value::as_str)
+                .and_then(|name| name.split_whitespace().last().map(|t| t.chars().count()))
+        })
+        .unwrap_or(crate::portable::ASSUMED_LAST_NAME_CHARS);
+    crate::portable::new_opportunity_keys(organisation, position, last_name)?;
     if destination.exists() {
         bail!(
             "refusing to overwrite existing opportunity: {}",

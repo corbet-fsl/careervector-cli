@@ -38,7 +38,49 @@ fn text(output: &Output) -> String {
 fn init(parent: &Path, name: &str) -> PathBuf {
     let output = cv(parent, &["init", name, "--no-git", "--no-build"]);
     assert!(output.status.success(), "{}", text(&output));
+    assert_windows_portable(&parent.join(name));
     parent.join(name)
+}
+
+/// The Windows path rules, asserted on Linux over every path a workspace holds: each name
+/// portable, each path within 200 characters (so a root of up to 60 stays under Windows' 260),
+/// no two siblings that differ only in case. Linux CI thereby catches what Wine can not.
+fn assert_windows_portable(root: &Path) {
+    use careervector_cli::portable::{MAX_PATH_CHARS, case_collisions, path_problem};
+    let mut directories = vec![root.to_path_buf()];
+    while let Some(directory) = directories.pop() {
+        let mut names = Vec::new();
+        for entry in fs::read_dir(&directory).unwrap() {
+            let entry = entry.unwrap();
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let relative = entry
+                .path()
+                .strip_prefix(root)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/");
+            // Files cv makes only; the user's `.git` is not ours.
+            if relative == ".git" || relative.starts_with(".git/") {
+                continue;
+            }
+            assert_eq!(path_problem(&relative), None, "{relative}");
+            assert!(
+                60 + 1 + relative.chars().count() <= 260,
+                "{relative} is over 260 with a 60-character root"
+            );
+            assert!(relative.chars().count() <= MAX_PATH_CHARS);
+            if entry.file_type().unwrap().is_dir() {
+                directories.push(entry.path());
+            }
+            names.push(name);
+        }
+        let plain: Vec<&str> = names.iter().map(String::as_str).collect();
+        assert!(
+            case_collisions(&plain).is_empty(),
+            "case collision in {}",
+            directory.display()
+        );
+    }
 }
 
 fn manifest(root: &Path) -> Value {
@@ -68,6 +110,7 @@ fn a_new_user_inits_and_builds_the_showcase_offline_without_tool_sources() {
     assert!(!root.join(".agent/src").exists(), "the binary is the tool");
     assert!(!root.join("Cargo.toml").exists());
     assert!(!root.join(".git").exists(), "init never starts git unasked");
+    assert_windows_portable(&root);
     assert!(!pdf.exists(), "--no-build style: nothing before a build");
     let build = cv(&root, &["build"]);
     assert!(build.status.success(), "{}", text(&build));
@@ -97,6 +140,7 @@ fn an_edited_workspace_updates_with_no_edit_lost() {
     assert!(text(&dry).contains("nothing was changed"));
     let apply = cv(&root, &["update", "--apply"]);
     assert!(apply.status.success(), "{}", text(&apply));
+    assert_windows_portable(&root);
     assert_eq!(fs::read(&profile).unwrap(), before);
     assert!(!scaffold.exists(), "a deleted scaffold does not come back");
     assert!(
@@ -514,4 +558,68 @@ mod regressions {
         assert!(!ok("0.2.0 aaaa\n0.1.5 bbbb\n", "0.1.5", "bbbb"));
         assert!(!ok("0.2.0 aaaa\n0.2.0 bbbb\n", "0.2.0", "bbbb"));
     }
+}
+
+#[test]
+fn names_that_cause_trouble_are_refused_with_a_suggestion_and_reported_by_check() {
+    let dir = scratch();
+    let root = init(dir.path(), "ws");
+    // An input key: refused before anything is written, with a valid one suggested.
+    let refused = cv(&root, &["new-opportunity", "Acme Corp", "lead"]);
+    assert!(!refused.status.success());
+    assert!(
+        text(&refused).contains("\"acme-corp\""),
+        "{}",
+        text(&refused)
+    );
+    assert!(!root.join("opportunities/Acme Corp").exists());
+    let device = cv(&root, &["new-opportunity", "con", "lead"]);
+    assert!(!device.status.success());
+    assert!(
+        text(&device).contains("reserved Windows device name"),
+        "{}",
+        text(&device)
+    );
+    // A file the user made: `cv check` reports it with a fix and touches nothing.
+    // The user's own files are only REPORTED, as warnings: `cv check` and `cv setup` go on, and
+    // nothing is renamed or deleted. (Windows can not create `con.txt`; Linux can hold both
+    // `Notes.md` and `notes.md`.)
+    if !cfg!(windows) {
+        fs::write(root.join("inputs/con.txt"), "mine").unwrap();
+    }
+    if cfg!(target_os = "linux") {
+        fs::write(root.join("inputs/Notes.md"), "a").unwrap();
+        fs::write(root.join("inputs/notes.md"), "b").unwrap();
+    }
+    // Finder and HFS+ write NFD: alone, that is not a finding.
+    fs::write(root.join("inputs/Zeugnis Mu\u{308}ller.pdf"), "nfd").unwrap();
+    let workspace = careervector_cli::Workspace::at(&root).unwrap();
+    let findings = careervector_cli::portable::workspace_name_findings(&workspace)
+        .unwrap()
+        .join("\n");
+    if !cfg!(windows) {
+        assert!(
+            findings.contains("inputs/con.txt") && findings.contains("_con.txt"),
+            "{findings}"
+        );
+    }
+    if cfg!(target_os = "linux") {
+        assert!(findings.contains("differ only in case"), "{findings}");
+        for kept in ["con.txt", "Notes.md", "notes.md"] {
+            assert!(root.join("inputs").join(kept).exists(), "{kept}");
+        }
+    }
+    assert!(!findings.contains("Zeugnis"), "{findings}");
+    if !cfg!(windows) {
+        assert!(findings.contains("never renames"), "{findings}");
+    }
+    assert!(root.join("inputs/Zeugnis Mu\u{308}ller.pdf").exists());
+    // `cv check` prints them as warnings and does not fail on them: the source says so.
+    let check = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(".agent/src/check.rs"),
+    )
+    .unwrap();
+    assert!(
+        check.contains("workspace_name_findings") && check.contains("println!(\"WARN {finding}\")")
+    );
 }
