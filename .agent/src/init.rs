@@ -95,11 +95,11 @@ impl Manifest {
             return Ok(None);
         }
         let text =
-            fs::read_to_string(&path).with_context(|| format!("cannot read {}", path.display()))?;
+            fs::read_to_string(&path).with_context(|| format!("cannot read {}", shown(&path)))?;
         let manifest: Self = serde_json::from_str(&text)
-            .with_context(|| format!("{} is not a valid cv manifest", path.display()))?;
+            .with_context(|| format!("{} is not a valid cv manifest", shown(&path)))?;
         if manifest.format != "cv-manifest" {
-            bail!("{} is not a cv manifest", path.display());
+            bail!("{} is not a cv manifest", shown(&path));
         }
         for file in manifest
             .files
@@ -139,7 +139,38 @@ pub fn safe_relative(path: &str) -> Result<PathBuf> {
     {
         bail!("unsafe path in the cv manifest: {path:?}");
     }
+    for component in relative.components() {
+        let name = component.as_os_str().to_str().unwrap_or("\u{fffd}");
+        if let Some(reason) = unportable(name) {
+            bail!("unsafe path in the cv manifest: {path:?}: {name:?} {reason}");
+        }
+    }
     Ok(relative.to_path_buf())
+}
+
+/// Why a file name could not be kept on every platform cv runs on, if it could not. In a
+/// verbatim Windows path these names are literal, not escapes, so they would be created as
+/// they are; they would then be unusable for Explorer, other tools and a checkout on Windows.
+fn unportable(name: &str) -> Option<&'static str> {
+    if name
+        .chars()
+        .any(|c| c.is_control() || "<>:\"|?*\\".contains(c))
+    {
+        return Some("holds a character that is not allowed in a Windows file name");
+    }
+    if name.ends_with('.') || name.ends_with(' ') {
+        return Some("ends with a dot or a space");
+    }
+    let stem = name
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_uppercase();
+    let reserved = ["CON", "PRN", "AUX", "NUL"].contains(&stem.as_str())
+        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.len() == 4
+            && stem.as_bytes()[3].is_ascii_digit());
+    reserved.then_some("is a reserved Windows device name")
 }
 
 /// The text of an absolute Windows path in the verbatim form (`\\?\C:\...`, `\\?\UNC\...`),
@@ -180,6 +211,12 @@ pub(crate) fn io_path(path: &Path) -> PathBuf {
     }
 }
 
+/// A path as people read it: without the Windows `\\?\` prefix where it can be dropped.
+#[must_use]
+pub(crate) fn shown(path: &Path) -> String {
+    dunce::simplified(path).display().to_string()
+}
+
 /// Write through a fresh, exclusively created temporary file in the same
 /// directory and an atomic rename, so a crash never leaves a half-written file
 /// and no existing path (a planted link, a user's file) is ever written through.
@@ -188,12 +225,12 @@ pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
     let path = io_path(path);
     let path = path.as_path();
     let parent = path.parent().context("a path without a parent")?;
-    fs::create_dir_all(parent).with_context(|| format!("cannot create {}", parent.display()))?;
+    fs::create_dir_all(parent).with_context(|| format!("cannot create {}", shown(parent)))?;
     let mut temporary = tempfile::NamedTempFile::new_in(parent)
-        .with_context(|| format!("cannot create a temporary file in {}", parent.display()))?;
+        .with_context(|| format!("cannot create a temporary file in {}", shown(parent)))?;
     temporary
         .write_all(bytes)
-        .with_context(|| format!("cannot write {}", path.display()))?;
+        .with_context(|| format!("cannot write {}", shown(path)))?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt as _;
@@ -205,7 +242,7 @@ pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<()> {
     }
     temporary
         .persist(path)
-        .map_err(|error| anyhow::anyhow!("cannot replace {}: {}", path.display(), error.error))?;
+        .map_err(|error| anyhow::anyhow!("cannot replace {}: {}", shown(path), error.error))?;
     Ok(())
 }
 
@@ -226,13 +263,13 @@ pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
             Ok(metadata) if metadata.file_type().is_symlink() => {
                 bail!(
                     "refusing {relative}: {} is a symbolic link (nothing was changed)",
-                    current.display()
+                    shown(&current)
                 );
             }
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
             Err(error) => {
-                return Err(error).with_context(|| format!("cannot inspect {}", current.display()));
+                return Err(error).with_context(|| format!("cannot inspect {}", shown(&current)));
             }
         }
     }
@@ -244,7 +281,10 @@ pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
     }
     let mut ancestor = target.parent();
     while let Some(directory) = ancestor {
-        if directory.exists() {
+        if directory
+            .try_exists()
+            .with_context(|| format!("cannot inspect {}", shown(directory)))?
+        {
             // Both in the form the file system resolves them: a long path keeps its Windows
             // prefix while a short root does not.
             let canonical = fs::canonicalize(directory)?;
@@ -284,28 +324,27 @@ pub struct InitReport {
 /// is ever overwritten. An existing file that already equals the shipped one is
 /// recorded; one that differs stays the user's and is listed.
 pub fn init(target: &Path, release: &Release<'_>, force: bool, git: Git) -> Result<InitReport> {
+    if target.exists() && !target.is_dir() {
+        bail!("{} exists and is not a directory", shown(target));
+    }
     if target.exists() && safe_path(target, MANIFEST)?.is_file() {
         bail!(
             "{} is already a cv workspace; run `cv update` to bring it to this version",
-            target.display()
+            shown(target)
         );
     }
     if target.exists() {
-        if !target.is_dir() {
-            bail!("{} exists and is not a directory", target.display());
-        }
         if !force && !directory_is_empty(target)? {
             bail!(
                 "{} is not empty; choose an empty directory (or pass --force, which still never overwrites an existing file)",
-                target.display()
+                shown(target)
             );
         }
     } else {
-        fs::create_dir_all(target)
-            .with_context(|| format!("cannot create {}", target.display()))?;
+        fs::create_dir_all(target).with_context(|| format!("cannot create {}", shown(target)))?;
     }
-    let root = dunce::canonicalize(target)
-        .with_context(|| format!("cannot resolve {}", target.display()))?;
+    let root =
+        dunce::canonicalize(target).with_context(|| format!("cannot resolve {}", shown(target)))?;
     for path in release.files.keys() {
         safe_path(&root, path)?;
     }
@@ -558,5 +597,115 @@ mod verbatim_tests {
                 .to_string_lossy()
                 .starts_with(r"\\?\")
         );
+    }
+}
+
+#[cfg(test)]
+mod path_nits {
+    use super::*;
+
+    #[test]
+    fn names_that_are_not_portable_are_refused() {
+        for bad in [
+            "a:b",
+            "a/b:c",
+            "name.",
+            "dir /f",
+            "dir/name ",
+            "CON",
+            "con.txt",
+            "dir/NUL",
+            "nul.tar.gz",
+            "COM1",
+            "lpt9.log",
+            "a<b",
+            "a>b",
+            "a\"b",
+            "a|b",
+            "a?b",
+            "a*b",
+            "a\\b",
+            "tab\there",
+        ] {
+            assert!(safe_relative(bad).is_err(), "{bad:?} must be refused");
+        }
+        for good in [
+            "cv.json",
+            ".cv/manifest.json",
+            "inputs/profile.toml",
+            "outputs/cvl/cv/harvard/d-plus/en/ch/content.toml",
+            "conclusion.md",
+            "console/x",
+            "COM10",
+            "com",
+            "lpt",
+            "auxiliary.txt",
+            "a.b.c",
+            ".gitignore",
+        ] {
+            assert!(safe_relative(good).is_ok(), "{good:?} must be accepted");
+        }
+    }
+
+    #[test]
+    fn every_shipped_path_is_portable() {
+        for path in Release::embedded().files.keys() {
+            assert!(safe_relative(path).is_ok(), "{path} would be refused");
+        }
+    }
+
+    #[test]
+    fn a_file_as_the_init_target_gets_a_clear_message() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("afile");
+        fs::write(&file, "x").unwrap();
+        let release = Release {
+            version: "1.0.0",
+            schema: 9,
+            files: std::collections::BTreeMap::from([(
+                "cv.json",
+                br#"{"schema_version": 9}"#.as_slice(),
+            )]),
+        };
+        let error = init(&file, &release, false, Git::No)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("exists and is not a directory"), "{error}");
+        assert!(!error.contains("cannot inspect"), "{error}");
+        assert_eq!(fs::read_to_string(&file).unwrap(), "x");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_ancestor_is_refused_not_ignored() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("w");
+        fs::create_dir_all(root.join("sub/deep")).unwrap();
+        fs::set_permissions(root.join("sub"), fs::Permissions::from_mode(0o000)).unwrap();
+        let result = safe_path(&root, "sub/deep/file.toml");
+        fs::set_permissions(root.join("sub"), fs::Permissions::from_mode(0o755)).unwrap();
+        // (A superuser can read anything; there the path is simply fine.)
+        if !running_as_root() {
+            assert!(
+                result.is_err(),
+                "an ancestor that can not be inspected must be refused"
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    fn running_as_root() -> bool {
+        std::fs::metadata("/proc/self").is_ok_and(|m| {
+            use std::os::unix::fs::MetadataExt as _;
+            m.uid() == 0
+        })
+    }
+
+    #[test]
+    fn messages_show_the_plain_form_of_a_verbatim_path() {
+        assert_eq!(shown(Path::new("/tmp/x")), "/tmp/x");
+        #[cfg(windows)]
+        assert_eq!(shown(Path::new(r"\\?\C:\Users\a\b")), r"C:\Users\a\b");
     }
 }

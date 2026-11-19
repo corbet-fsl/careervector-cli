@@ -14,7 +14,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::fileset_source::sha256_hex;
 use crate::init::{
-    MANIFEST, MANIFEST_VERSION, Manifest, Release, io_path, safe_path, schema_of, write_file,
+    MANIFEST, MANIFEST_VERSION, Manifest, Release, io_path, safe_path, schema_of, shown, write_file,
 };
 
 /// Suffix of the new version placed beside a file the user changed.
@@ -77,7 +77,7 @@ impl Plan {
 fn hash_of(path: &Path) -> Result<Option<String>> {
     if path.is_file() {
         Ok(Some(sha256_hex(&fs::read(path).with_context(|| {
-            format!("cannot read {}", path.display())
+            format!("cannot read {}", shown(path))
         })?)))
     } else {
         Ok(None)
@@ -108,7 +108,7 @@ pub fn find_workspace(start: &Path) -> Result<PathBuf> {
     crate::workspace::find_root(start).ok_or_else(|| {
         anyhow::anyhow!(
             "{} is not inside a cv workspace (no cv.json found); run `cv init <dir>` to create one",
-            start.display()
+            shown(start)
         )
     })
 }
@@ -382,7 +382,7 @@ fn remove_if_present(path: &Path) -> Result<()> {
     match fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error).with_context(|| format!("cannot remove {}", path.display())),
+        Err(error) => Err(error).with_context(|| format!("cannot remove {}", shown(path))),
     }
 }
 
