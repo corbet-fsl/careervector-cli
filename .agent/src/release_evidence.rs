@@ -537,8 +537,26 @@ fn source(root: &Path, env: &Env) -> Result<(Identity, SourceFiles)> {
             return fail("Checkout differs from the requested source commit.");
         }
         // Generated ignored caches are allowed; changed tracked/public inputs are not.
-        if !git(root, &["status", "--porcelain", "--untracked-files=normal"])?.is_empty() {
-            return fail("Release source checkout must be clean.");
+        let dirty = git(root, &["status", "--porcelain", "--untracked-files=normal"])?;
+        if !dirty.is_empty() {
+            // Name the paths: a stage that dirties the checkout must be found from the log.
+            let lines: Vec<&str> = dirty.lines().collect();
+            let shown = lines
+                .iter()
+                .take(20)
+                .copied()
+                .collect::<Vec<_>>()
+                .join("; ");
+            let more = lines.len().saturating_sub(20);
+            return fail(format!(
+                "Release source checkout must be clean. Changed ({} path(s)): {shown}{}",
+                lines.len(),
+                if more > 0 {
+                    format!("; ... and {more} more")
+                } else {
+                    String::new()
+                }
+            ));
         }
         let output = std::process::Command::new("git")
             .args(["archive", commit])

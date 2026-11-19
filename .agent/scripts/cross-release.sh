@@ -106,6 +106,11 @@ if [[ $driver == llvm-mingw ]]; then
     echo "$binary imports a mingw runtime DLL that a clean Windows does not have." >&2; exit 2
   fi
 fi
+# Nothing a build does may write into the source tree: the evidence below refuses a dirty
+# checkout. Say which paths, here, before the next stage has to guess.
+if [[ -d .git ]] && dirt="$(git status --porcelain --untracked-files=normal)" && [[ -n $dirt ]]; then
+  printf 'cross-release.sh (%s): the build left the source tree dirty:\n%s\n' "$platform" "$dirt"
+fi
 # The tested native executable of this run serves the evidence command when it
 # exists; otherwise the command runs from the checkout.
 if [[ -x "$output/cv-linux-x86_64" ]]; then export CCVL_RELEASE_EVIDENCE_BIN="$output/cv-linux-x86_64"; fi

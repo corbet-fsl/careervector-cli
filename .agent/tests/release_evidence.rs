@@ -1124,7 +1124,10 @@ fn a_clean_checkout_without_an_archive_has_the_same_identity() {
         .env_remove("SOURCE_SHA256")
         .current_dir(&checkout)
         .args(["release-evidence", "source"]);
-    assert_refused(&dirty.output().unwrap(), "must be clean");
+    // The refusal names the dirty path (Cargo.lock here), not just the fact.
+    let refused = dirty.output().unwrap();
+    assert_refused(&refused, "must be clean");
+    assert!(text(&refused).contains("Cargo.lock"), "{}", text(&refused));
 }
 
 #[test]
