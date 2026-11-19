@@ -13,7 +13,9 @@ use careervector_cli::archive::sha256_hex;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
-const BIN: &str = env!("CARGO_BIN_EXE_cv");
+#[path = "test_bin.rs"]
+mod test_bin;
+use test_bin::BIN;
 const UPSTREAM_URL: &str = "https://forge.example.invalid/corbet-fsl/careervector-cli.git";
 const TOKEN: &str = "fixture-job-token";
 /// Publication credentials: each one alone must stop the stage.
@@ -329,7 +331,7 @@ impl Downstream {
         for (key, value) in changes {
             env.insert((*key).to_owned(), (*value).to_owned());
         }
-        let output = Command::new(BIN)
+        let output = Command::new(&*BIN)
             .arg("private-check")
             .env_clear()
             .envs(env)
@@ -557,7 +559,7 @@ fn ownership_and_document_failures_do_not_report_success_or_private_text() {
 fn malformed_policy_reports_only_a_fixed_message() {
     // A policy that is not JSON can never be echoed into a log.
     let fixture = Downstream::with_policy(Some("PRIVATE_SENTINEL is not json"));
-    let output = Command::new(BIN)
+    let output = Command::new(&*BIN)
         .arg("private-check")
         .env_clear()
         .envs(fixture.env.clone())

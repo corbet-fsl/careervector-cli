@@ -15,7 +15,9 @@ use careervector_cli::release_evidence::{
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
-const BIN: &str = env!("CARGO_BIN_EXE_cv");
+#[path = "test_bin.rs"]
+mod test_bin;
+use test_bin::BIN;
 const COMMIT: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const LFS_FILE: &str = "inputs/assets/lfs.bin";
 /// The one source file the fixture commits as executable.
@@ -186,7 +188,7 @@ impl Release {
     }
 
     fn command(&self, extra: &[(&str, &str)]) -> Command {
-        let mut command = Command::new(BIN);
+        let mut command = Command::new(&*BIN);
         command
             .env_clear()
             .envs(
@@ -1577,19 +1579,27 @@ fn the_archive_gate_script_carries_every_identity_field() {
 fn the_windows_suite_carries_the_cv_binary_to_the_clone() {
     let root = repository();
     let read = |path: &str| fs::read_to_string(root.join(path)).unwrap();
-    for test in [
-        ".agent/tests/cli_commands.rs",
-        ".agent/tests/init_update.rs",
-    ] {
-        let source = read(test);
+    // No test file but test_bin.rs may name Cargo's baked-in path to the cv binary (the macOS leg
+    // found release_evidence.rs spawning it: the path does not exist in a clone).
+    let needle = concat!("env!(\"CARGO_BIN_", "EXE_cv\")");
+    for entry in fs::read_dir(root.join(".agent/tests")).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|e| e != "rs") || path.ends_with("test_bin.rs") {
+            continue;
+        }
+        let source = fs::read_to_string(&path).unwrap();
         assert!(
-            source.contains("mod test_bin;"),
-            "{test} must resolve the binary through test_bin.rs"
+            !source.contains(needle),
+            "{} bakes in the build host path to cv: use test_bin::BIN",
+            path.display()
         );
-        assert!(
-            !source.contains("env!(\"CARGO_BIN_EXE_cv\")"),
-            "{test} bakes in the build host path"
-        );
+        if source.contains("Command::new(&*BIN)") {
+            assert!(
+                source.contains("mod test_bin;"),
+                "{} spawns BIN without resolving it through test_bin.rs",
+                path.display()
+            );
+        }
     }
     assert!(read(".agent/scripts/windows-test.sh").contains("vm-win put \"$scratch/cv.exe\""));
     assert!(read(".agent/scripts/windows-clone-suite.ps1").contains("CCVL_TEST_BIN"));
@@ -1738,10 +1748,13 @@ fn the_macos_sdk_is_validated_before_anything_is_built() {
     assert!(text(&fallback).contains(&format!("SDKROOT={}", sdk.display())));
 }
 
+/// (Linux only: the claim runs on the Linux build host and uses flock and GNU stat, which the
+/// macOS clone lacks; the Mac side of the scheme is tested through `bundle_check` below.)
 /// The claim on the fixed source root of the macOS test bundle (macos-test-src.sh): /var/tmp
 /// is shared and persistent on the build host, so a refusal deletes nothing, a symbolic link
 /// is never followed, a second run does not run alongside the first and a cleanup removes
 /// only what its own token made.
+#[cfg(target_os = "linux")]
 mod xtest_claim {
     use super::*;
     use std::os::unix::fs::symlink;
