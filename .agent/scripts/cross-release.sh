@@ -84,6 +84,15 @@ if [[ $driver == zigbuild || $driver == zigbuild-apple ]]; then
   # scratch directory instead, with the manifest named by path, so a stray file cannot dirty
   # the source tree the evidence verifies.
   build_cwd="$(mktemp -d "${TMPDIR:-/tmp}/cross-cwd.XXXXXX")"
+  # rustc and the linker run in the workspace root whatever the directory above; remove what the
+  # zig linker leaves there (a.o) and nothing else (stray-outputs.sh).
+  # shellcheck source=.agent/scripts/stray-outputs.sh
+  source .agent/scripts/stray-outputs.sh
+  tree_before="$(mktemp "${TMPDIR:-/tmp}/tree-before.XXXXXX")"
+  ccvl_tree_snapshot "$tree_before"
+  if [[ $driver == zigbuild-apple ]]; then
+    printf 'zig %s, cargo-zigbuild %s\n' "$(zig version)" "$(cargo-zigbuild --version | awk '{print $NF}')"
+  fi
   build_logged "${CCVL_CARGO_COMMAND[@]}" zigbuild --locked --release \
     --manifest-path "$repo_root/Cargo.toml" --config "$repo_root/.cargo/release-profile.toml" --target "$zig_target"
   if [[ -n "$(ls -A "$build_cwd")" ]]; then
@@ -91,6 +100,8 @@ if [[ $driver == zigbuild || $driver == zigbuild-apple ]]; then
   fi
   find "$build_cwd" -delete
   unset build_cwd
+  ccvl_remove_stray_objects "$tree_before" || true
+  rm -f "$tree_before"
   tool="cargo-zigbuild $(cargo-zigbuild --version | awk '{print $NF}'), zig $(zig version)"
   if [[ $driver == zigbuild-apple ]]; then tool="$tool, $(ccvl_macos_sdk_identity)"; fi
 else

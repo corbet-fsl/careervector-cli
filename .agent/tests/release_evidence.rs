@@ -2090,3 +2090,117 @@ fn the_zigbuild_builds_run_outside_the_checkout() {
         );
     }
 }
+
+/// cargo runs the linker in the workspace root; the zig linker of the darwin builds leaves
+/// `a.o` there (release runs 109 and 111). The cross stage removes exactly the new untracked
+/// `*.o` files of the root, and nothing else.
+mod stray_outputs {
+    use super::*;
+
+    fn repo() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        for args in [
+            vec!["init", "--quiet"],
+            vec!["config", "user.email", "t@example.invalid"],
+            vec!["config", "user.name", "t"],
+        ] {
+            let status = Command::new("git")
+                .args(&args)
+                .current_dir(dir.path())
+                .status()
+                .unwrap();
+            assert!(status.success());
+        }
+        fs::write(dir.path().join("tracked.txt"), "x").unwrap();
+        for args in [vec!["add", "."], vec!["commit", "--quiet", "-m", "x"]] {
+            let status = Command::new("git")
+                .args(&args)
+                .current_dir(dir.path())
+                .status()
+                .unwrap();
+            assert!(status.success());
+        }
+        dir
+    }
+
+    /// Snapshot, run `build` (shell), then the removal; returns its output.
+    fn run(dir: &Path, build: &str) -> Output {
+        // The snapshot lives beside the repository, in a directory of its own per call.
+        let side = tempfile::tempdir().unwrap();
+        Command::new("bash")
+            .args([
+                "-c",
+                "set -u; source \"$1/.agent/scripts/stray-outputs.sh\"; ccvl_tree_snapshot \"$2/before\"; eval \"$3\"; ccvl_remove_stray_objects \"$2/before\"",
+                "bash",
+            ])
+            .arg(repository())
+            .arg(side.path())
+            .arg(build)
+            .current_dir(dir)
+            .env("TMPDIR", side.path())
+            .output()
+            .unwrap()
+    }
+
+    #[test]
+    fn a_new_stray_object_in_the_root_is_removed_by_name() {
+        let dir = repo();
+        let result = run(dir.path(), "echo obj > a.o; echo obj > b.o");
+        assert!(result.status.success(), "{}", text(&result));
+        assert!(
+            text(&result).contains("removing stray linker output: a.o"),
+            "{}",
+            text(&result)
+        );
+        assert!(!dir.path().join("a.o").exists() && !dir.path().join("b.o").exists());
+        assert!(dir.path().join("tracked.txt").exists());
+    }
+
+    #[test]
+    fn any_other_new_entry_fails_and_nothing_is_deleted() {
+        let dir = repo();
+        let result = run(dir.path(), "echo obj > a.o; echo y > other.txt");
+        assert_eq!(result.status.code(), Some(1), "{}", text(&result));
+        assert!(text(&result).contains("other.txt"), "{}", text(&result));
+        assert!(
+            dir.path().join("a.o").exists(),
+            "the stray object stays when other dirt is present"
+        );
+        // An object below the root, and a change to a tracked file, are other dirt too.
+        let dir = repo();
+        let nested = run(dir.path(), "mkdir sub; echo obj > sub/c.o");
+        assert_eq!(nested.status.code(), Some(1), "{}", text(&nested));
+        assert!(dir.path().join("sub/c.o").exists());
+        let dir = repo();
+        let modified = run(dir.path(), "echo changed > tracked.txt");
+        assert_eq!(modified.status.code(), Some(1), "{}", text(&modified));
+    }
+
+    #[test]
+    fn a_file_that_existed_before_the_build_is_never_touched() {
+        let dir = repo();
+        fs::write(dir.path().join("a.o"), "mine").unwrap();
+        // The snapshot already lists a.o: the build's own object is b.o only.
+        let result = run(dir.path(), "echo obj > b.o");
+        assert!(result.status.success(), "{}", text(&result));
+        assert_eq!(fs::read_to_string(dir.path().join("a.o")).unwrap(), "mine");
+        assert!(!dir.path().join("b.o").exists());
+        // Nothing new: nothing removed, success.
+        let quiet = run(dir.path(), "true");
+        assert!(quiet.status.success(), "{}", text(&quiet));
+        assert_eq!(fs::read_to_string(dir.path().join("a.o")).unwrap(), "mine");
+    }
+
+    #[test]
+    fn the_cross_stage_uses_it_around_the_zigbuild_and_prints_the_versions() {
+        let script =
+            fs::read_to_string(repository().join(".agent/scripts/cross-release.sh")).unwrap();
+        assert!(
+            script.contains("ccvl_tree_snapshot") && script.contains("ccvl_remove_stray_objects")
+        );
+        assert!(
+            script.contains("cargo-zigbuild %s"),
+            "the zig and cargo-zigbuild versions go to the log"
+        );
+    }
+}
